@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KhataBase</title>
+<meta name="theme-color" content="#1E5A8C">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --ink-navy:#1E5A8C;
+    --ink-navy-2:#2E7BB8;
+    --paper:#F3FAFF;
+    --paper-2:#E7F3FC;
+    --rule:#BFE0F5;
+    --margin-red:#B33A3A;
+    --credit-green:#2F6B4F;
+    --gold:#C9852A;
+    --text-dark:#1B2A38;
+    --text-muted:#5C7A91;
+    --text-light:#EAF6FF;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:linear-gradient(180deg, #D6ECFB 0%, #BFE0F5 100%);
+    min-height:100vh;
+    font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    color:var(--text-dark);
+    padding:24px 12px 60px;
+    display:flex;
+    justify-content:center;
+  }
+  .book{
+    width:100%;
+    max-width:460px;
+  }
+  .page{
+    background:var(--paper);
+    box-shadow:0 10px 30px rgba(30,90,140,.18);
+    padding:22px 18px 26px;
+    border-radius:14px;
+  }
+  header.title-row{
+    position:relative;
+    z-index:1;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    margin-bottom:14px;
+  }
+  h1{
+    font-family:Georgia,'Times New Roman',serif;
+    font-size:22px;
+    margin:0;
+    letter-spacing:.01em;
+  }
+  .subtitle{
+    font-size:12px;
+    color:var(--text-muted);
+    margin-top:2px;
+  }
+  .btn-settings{
+    background:none;
+    border:1px solid var(--text-muted);
+    color:var(--text-muted);
+    border-radius:20px;
+    font-size:11px;
+    padding:5px 10px;
+    cursor:pointer;
+    font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  }
+  .btn-settings:hover{ border-color:var(--text-dark); color:var(--text-dark); }
+
+  .balance-card{
+    position:relative; z-index:1;
+    background:var(--ink-navy);
+    color:var(--text-light);
+    border-radius:10px;
+    padding:16px 18px;
+    margin-bottom:16px;
+    text-align:center;
+  }
+  .balance-label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    color:#B9C2D0;
+  }
+  .balance-amount{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:30px;
+    font-weight:600;
+    margin:4px 0 2px;
+  }
+  .balance-amount.positive{ color:#7FD9A6; }
+  .balance-amount.negative{ color:#E48989; }
+  .balance-amount.zero{ color:var(--gold); }
+  .balance-sub{ font-size:11.5px; color:#9BA5B5; }
+  .mini-tally{
+    display:flex;
+    justify-content:center;
+    gap:18px;
+    margin-top:10px;
+    font-size:11.5px;
+    color:#B9C2D0;
+  }
+  .mini-tally b{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+
+  .form-card{
+    position:relative; z-index:1;
+    background:var(--paper-2);
+    border:1px solid #E1D6BB;
+    border-radius:10px;
+    padding:14px;
+    margin-bottom:18px;
+  }
+  .form-row{ display:flex; gap:8px; margin-bottom:8px; }
+  .form-row > div{ flex:1; }
+  label.field-label{
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--text-muted);
+    display:block;
+    margin-bottom:3px;
+  }
+  input[type=number], input[type=date], input[type=text], input[type=email], input[type=tel], select{
+    width:100%;
+    border:1px solid #D8CDAF;
+    background:#fff;
+    border-radius:6px;
+    padding:9px 10px;
+    font-size:14.5px;
+    font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    color:var(--text-dark);
+  }
+  select{ appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%238A7F68'%3E%3Cpath d='M5.5 7.5l4.5 4.5 4.5-4.5'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; background-size:14px; padding-right:30px; }
+  input.invalid, select.invalid{ border-color:var(--margin-red); }
+  input[type=number]{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-weight:600; }
+  input:focus, select:focus{ outline:2px solid var(--gold); outline-offset:1px; }
+
+  .book-row{
+    position:relative; z-index:30;
+    display:flex; gap:6px; align-items:center;
+    margin-bottom:14px;
+  }
+  .book-row select{ flex:1; min-width:0; font-family:Georgia,'Times New Roman',serif; font-weight:500; }
+
+  .menu-wrap{ position:relative; flex-shrink:0; z-index:30; }
+  .menu-dropdown{
+    position:absolute; top:calc(100% + 6px); right:0;
+    background:#fff; border:1px solid var(--rule); border-radius:10px;
+    box-shadow:0 8px 24px rgba(30,90,140,.2);
+    min-width:170px; overflow:hidden; z-index:30;
+  }
+  .menu-item{
+    display:block; width:100%; text-align:left;
+    background:none; border:none; border-bottom:1px solid var(--rule);
+    padding:11px 14px; font-size:13px; font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    color:var(--text-dark); cursor:pointer;
+  }
+  .menu-item:last-child{ border-bottom:none; }
+  .menu-item:hover{ background:var(--paper-2); }
+  .menu-item.danger{ color:var(--margin-red); }
+
+  .who-toggle{
+    display:flex; gap:6px; margin-bottom:10px;
+  }
+  .who-pill{
+    flex:1;
+    text-align:center;
+    padding:7px 6px;
+    border-radius:20px;
+    border:1px solid #D8CDAF;
+    background:#fff;
+    font-size:12.5px;
+    cursor:pointer;
+    color:var(--text-muted);
+  }
+  .who-pill.active{
+    background:var(--ink-navy);
+    color:var(--text-light);
+    border-color:var(--ink-navy);
+  }
+
+  .action-row{ display:flex; gap:8px; margin-top:4px; }
+  .btn-action{
+    flex:1;
+    border:none;
+    border-radius:8px;
+    padding:12px 8px;
+    font-family:Georgia,'Times New Roman',serif;
+    font-size:14px;
+    font-weight:700;
+    letter-spacing:.03em;
+    cursor:pointer;
+    opacity:.4;
+    pointer-events:none;
+    transition:opacity .15s ease, transform .1s ease;
+    color:#fff;
+  }
+  .btn-action.enabled{ opacity:1; pointer-events:auto; }
+  .btn-action.enabled:active{ transform:scale(.97); }
+  .btn-gave{ background:var(--margin-red); }
+  .btn-got{ background:var(--credit-green); }
+
+  .section-label{
+    position:relative; z-index:1;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+    color:var(--text-muted);
+    margin:4px 0 8px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .link-btn{
+    background:none; border:none; color:var(--margin-red);
+    font-size:11px; cursor:pointer; text-decoration:underline;
+    font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif; padding:0;
+  }
+
+  .day-group{ margin-bottom:10px; }
+  .entry{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 12px;
+    gap:8px;
+    background:var(--paper-2);
+    border:1px solid var(--rule);
+    border-radius:10px;
+    margin-bottom:8px;
+    box-shadow:0 1px 3px rgba(30,90,140,.08);
+  }
+  .entry-left{ min-width:0; }
+  .entry-note{
+    font-size:13.5px;
+    color:var(--text-dark);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .entry-meta{ font-size:11px; color:var(--text-muted); margin-top:1px; }
+  .entry-tag{
+    display:inline-block; font-size:10px; color:var(--text-muted);
+    background:#fff;
+    border:1px solid var(--rule); border-radius:10px; padding:1px 7px; margin-top:3px;
+  }
+  .entry-right{ text-align:right; flex-shrink:0; }
+  .entry-amount{
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-weight:600;
+    font-size:14.5px;
+  }
+  .entry-amount.gave{ color:var(--margin-red); }
+  .entry-amount.got{ color:var(--credit-green); }
+  .entry-balance{ font-size:10.5px; color:var(--text-muted); font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  .entry-menu-wrap{ position:relative; flex-shrink:0; }
+  .entry-menu-btn{
+    background:none; border:1px solid var(--rule); color:var(--text-muted);
+    border-radius:14px; font-size:11px; padding:5px 9px; cursor:pointer;
+    font-family:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+  }
+  .entry-menu-btn:hover{ border-color:var(--ink-navy); color:var(--ink-navy); }
+  .entry-menu-dropdown{
+    position:absolute; top:calc(100% + 6px); right:0;
+    background:#fff; border:1px solid var(--rule); border-radius:10px;
+    box-shadow:0 8px 24px rgba(30,90,140,.2);
+    min-width:120px; overflow:hidden; z-index:30;
+  }
+
+  .empty-state{
+    position:relative; z-index:1;
+    text-align:center;
+    padding:30px 10px;
+    color:var(--text-muted);
+    font-size:13px;
+  }
+
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(27,36,48,.55);
+    display:flex; align-items:center; justify-content:center; z-index:10;
+    padding:16px;
+  }
+  .modal{
+    background:var(--paper); border-radius:10px; padding:18px; width:100%; max-width:340px; max-height:85vh; overflow:auto;
+  }
+  .modal h3{ font-family:Georgia,'Times New Roman',serif; margin:0 0 12px; font-size:16px; }
+  .modal .field-label{ margin-top:10px; }
+  .modal-buttons{ display:flex; gap:8px; margin-top:16px; }
+  .modal-buttons button{ flex:1; padding:9px; border-radius:6px; border:none; cursor:pointer; font-size:13px; }
+  .btn-cancel{ background:#E7DFC9; color:var(--text-dark); }
+  .btn-save{ background:var(--ink-navy); color:var(--text-light); }
+  .btn-danger{ background:var(--margin-red); color:#fff; }
+
+  .toast{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+    background:var(--ink-navy); color:var(--text-light); padding:9px 16px;
+    border-radius:20px; font-size:12.5px; z-index:20; opacity:0;
+    transition:opacity .25s ease; pointer-events:none;
+  }
+  .toast.show{ opacity:1; }
+  .account-card{ text-align:center; }
+  .account-email{ color:var(--text-muted); font-size:12px; margin-top:8px; }
+  .otp-input{ text-align:center; letter-spacing:.35em; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:22px !important; }
+
+  @media (max-width:360px){
+    .balance-amount{ font-size:26px; }
+  }
+</style>
+<meta name="description" content="KhataBase personal expense ledger">
+<style>
+  .auth-title{ font-family:Georgia,'Times New Roman',serif; font-size:22px; font-weight:600; color:var(--ink-navy); text-align:center; margin-bottom:4px; }
+  .auth-error{ color:var(--margin-red); font-size:13px; min-height:18px; margin:6px 0 10px; }
+  .auth-ok{ color:var(--credit-green); }
+  .auth-links{ display:flex; justify-content:space-between; gap:8px; margin-top:12px; }
+  .auth-or{ text-align:center; color:#7a8aa0; font-size:12px; margin:14px 0 10px; }
+  .auth-legal{ text-align:center; font-size:11px; color:#7a8aa0; margin-top:14px; }
+  .auth-legal a{ color:inherit; }
+  .member-row{ display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px dashed rgba(30,90,140,.25); font-size:14px; word-break:break-all; }
+  .member-tag{ font-size:11px; color:#7a8aa0; margin-left:6px; white-space:nowrap; }
+</style>
+</head>
+<body>
+<div class="book">
+  <div class="page">
+
+    <div id="loadingView"><div class="empty-state">Loading…</div></div>
+
+    <!-- ============ Sign in / create account ============ -->
+    <div id="authView" style="display:none;">
+      <div class="form-card">
+        <div class="auth-title">KhataBase</div>
+        <div class="form-row">
+          <div><label class="field-label">Email</label>
+            <input type="email" id="authEmail" autocomplete="email" placeholder="you@example.com"></div>
+        </div>
+        <div class="form-row">
+          <div><label class="field-label">Password</label>
+            <input type="password" id="authPassword" autocomplete="current-password" placeholder="At least 6 characters"></div>
+        </div>
+        <div class="auth-error" id="authError"></div>
+        <button class="btn-save" id="authSubmit" style="width:100%;">Sign in</button>
+        <div class="auth-links">
+          <button class="link-btn" id="authToggle">New here? Create an account</button>
+          <button class="link-btn" id="authForgot">Forgot password?</button>
+        </div>
+        <div class="auth-or">— or —</div>
+        <button class="btn-settings" id="googleBtn" style="width:100%;">Continue with Google</button>
+        <div class="auth-legal">By continuing you agree to the <a href="terms.html">Terms</a> and <a href="privacy.html">Privacy Policy</a>.</div>
+      </div>
+    </div>
+
+    <!-- ============ Email verification ============ -->
+    <div id="verifyView" style="display:none;">
+      <div class="form-card">
+        <div class="auth-title">Verify your email</div>
+        <div class="entry-meta" id="verifyText" style="margin:8px 0;"></div>
+        <div class="auth-error" id="verifyMsg"></div>
+        <button class="btn-save" id="verifyDone" style="width:100%;">I've verified — continue</button>
+        <div class="auth-links">
+          <button class="link-btn" id="verifyResend">Resend email</button>
+          <button class="link-btn" id="verifySignOut">Use a different account</button>
+        </div>
+        <div class="entry-meta" style="margin-top:12px;">Can't find it? Check your spam folder.</div>
+      </div>
+    </div>
+
+    <!-- ============ Main app ============ -->
+    <div id="mainUI" style="display:none;">
+      <div class="book-row">
+        <div style="font-family:Georgia,'Times New Roman',serif; font-weight:700; font-size:20px; color:var(--ink-navy);">KhataBase</div>
+        <select id="bookSelect" aria-label="Select khatabook"><option>Loading books…</option></select>
+        <div class="menu-wrap">
+          <button class="btn-settings" id="menuBtn">Menu ▾</button>
+          <div class="menu-dropdown" id="menuDropdown" style="display:none;">
+            <button class="menu-item" id="newBookBtn">New khatabook</button>
+            <button class="menu-item" id="renameBookBtn">Rename khatabook</button>
+            <button class="menu-item danger" id="deleteBookBtn">Move khatabook to History</button>
+            <button class="menu-item" id="bookHistoryBtn">History</button>
+            <button class="menu-item" id="modesBtn">Payment modes</button>
+            <button class="menu-item" id="signOutBtn">Sign out</button>
+            <button class="menu-item danger" id="deleteAccountBtn">Delete account &amp; data</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="balance-card">
+        <div class="balance-label">Net Expenses</div>
+        <div class="balance-amount zero" id="balanceAmount">₹0</div>
+        <div class="mini-tally">
+          <div>Gave: <b id="totalGave">₹0</b></div>
+          <div>Got: <b id="totalGot">₹0</b></div>
+        </div>
+      </div>
+      <div class="subtitle" id="syncStatus" style="text-align:center; margin:-10px 0 14px;"></div>
+
+      <div class="form-card" id="formCard">
+        <div class="form-row">
+          <div>
+            <label class="field-label">Amount (₹)</label>
+            <input type="number" id="amountInput" placeholder="0" min="0" step="0.01" inputmode="decimal">
+          </div>
+          <div>
+            <label class="field-label">Date</label>
+            <input type="date" id="dateInput">
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label class="field-label">Payment Mode *</label>
+            <select id="paymentModeSelect"><option value="">Select payment mode…</option></select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div>
+            <label class="field-label">Note (optional)</label>
+            <input type="text" id="noteInput" maxlength="200" placeholder="e.g. Auto fare, Lunch">
+          </div>
+        </div>
+        <div class="action-row">
+          <button class="btn-action btn-gave" id="btnGave">YOU GAVE</button>
+          <button class="btn-action btn-got" id="btnGot">YOU GOT</button>
+        </div>
+      </div>
+
+      <div class="section-label">
+        <span>Entries</span>
+        <button class="link-btn" id="exportBtn">Export CSV</button>
+      </div>
+
+      <div id="listContainer"><div class="empty-state">Loading entries…</div></div>
+
+      <div class="auth-legal" style="margin-top:22px;">
+        <span id="userLine"></span><br>
+        <a href="privacy.html">Privacy</a> · <a href="terms.html">Terms</a>
+      </div>
+    </div>
+
+    <div class="form-card" id="errorCard" style="display:none;">
+      <label class="field-label">Something went wrong</label>
+      <div class="entry-meta" id="errorMessage" style="margin-top:8px;"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script type="module">
+import * as DB from './db.js?v=multi-books-1';
+
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+}
+
+/* ---------------- State ---------------- */
+const state = { user: null, books: [], activeBookId: null, entries: [], modes: [], ready: false, pendingMode: null };
+let unsubBooks = null, unsubEntries = null, unsubModes = null, seeding = false, authMode = 'signin', modesModalRefresh = null, booksModalRefresh = null, appGeneration = 0;
+
+/* ---------------- Helpers ---------------- */
+const $ = id => document.getElementById(id);
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmtMoney(n){
+  const v = Math.abs(n);
+  return '₹' + v.toLocaleString('en-IN', {minimumFractionDigits: v%1?2:0, maximumFractionDigits:2});
+}
+function isoToDisplay(iso){
+  if(!iso || iso.indexOf('-')===-1) return iso;
+  const p = iso.split('-');
+  return p[0].length===4 ? p[2]+'-'+p[1]+'-'+p[0] : iso;
+}
+function displayToIso(disp){
+  if(!disp || disp.indexOf('-')===-1) return disp;
+  const p = disp.split('-');
+  return p[0].length===4 ? disp : p[2]+'-'+p[1]+'-'+p[0];
+}
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function showToast(msg){
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2400);
+}
+function newId(){ return 'e_'+Date.now()+'_'+Math.random().toString(36).slice(2,8); }
+function setSyncStatus(text){ $('syncStatus').textContent = text; }
+function show(view){
+  $('loadingView').style.display = view==='loading' ? 'block' : 'none';
+  $('authView').style.display    = view==='auth'    ? 'block' : 'none';
+  $('verifyView').style.display  = view==='verify'  ? 'block' : 'none';
+  $('mainUI').style.display      = view==='app'     ? 'block' : 'none';
+}
+function makeModal(html){
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.innerHTML = '<div class="modal">'+html+'</div>';
+  document.body.appendChild(backdrop);
+  return backdrop;
+}
+/* ---------------- Auth UI ---------------- */
+const AUTH_ERRORS = {
+  'auth/invalid-credential': 'Incorrect email or password.',
+  'auth/wrong-password': 'Incorrect password.',
+  'auth/user-not-found': 'Incorrect email or password.',
+  'auth/invalid-email': 'That email address looks invalid.',
+  'auth/email-already-in-use': 'An account with this email already exists. Try signing in.',
+  'auth/weak-password': 'Password must be at least 6 characters.',
+  'auth/too-many-requests': 'Too many attempts. Please wait a few minutes and try again.',
+  'auth/network-request-failed': 'No internet connection.',
+  'auth/unauthorized-domain': 'This website address is not authorised in Firebase (Authentication → Settings → Authorized domains).',
+  'auth/operation-not-allowed': 'This sign-in method is not enabled in the Firebase console (Authentication → Sign-in method).',
+  'auth/configuration-not-found': 'Authentication is not set up yet. In the Firebase console open Authentication and click Get started.',
+  'auth/invalid-api-key': 'The API key in firebase-config.js is wrong. Re-copy it from Project settings.',
+  'auth/api-key-not-valid.-please-pass-a-valid-api-key.': 'The API key in firebase-config.js is wrong. Re-copy it from Project settings.',
+  'auth/popup-blocked': 'Your browser blocked the Google pop-up. Allow pop-ups and try again.',
+  'auth/requires-recent-login': 'Please sign in again, then retry.'
+};
+function authErrorText(err){ return AUTH_ERRORS[err && err.code] || (err && err.message) || 'Something went wrong. Please try again.'; }
+function setAuthMode(mode){
+  authMode = mode;
+  $('authSubmit').textContent = mode==='signup' ? 'Create account' : 'Sign in';
+  $('authToggle').textContent = mode==='signup' ? 'Already have an account? Sign in' : 'New here? Create an account';
+  $('authPassword').autocomplete = mode==='signup' ? 'new-password' : 'current-password';
+  $('authError').textContent = '';
+}
+async function submitAuth(){
+  const email = $('authEmail').value.trim(), password = $('authPassword').value;
+  const err = $('authError'); err.className = 'auth-error'; err.textContent = '';
+  if(!email || !password){ err.textContent = 'Enter your email and password.'; return; }
+  $('authSubmit').disabled = true;
+  try{
+    if(authMode==='signup') await DB.signUpEmail(email, password);
+    else await DB.signInEmail(email, password);
+  }catch(e){ err.textContent = authErrorText(e); }
+  finally{ $('authSubmit').disabled = false; }
+}
+async function googleSignIn(){
+  const err = $('authError'); err.className = 'auth-error'; err.textContent = '';
+  try{ await DB.signInGoogle(); }
+  catch(e){
+    if(e.code==='auth/popup-closed-by-user' || e.code==='auth/cancelled-popup-request') return;
+    err.textContent = authErrorText(e);
+  }
+}
+async function forgotPassword(){
+  const email = $('authEmail').value.trim(), err = $('authError');
+  err.className = 'auth-error';
+  if(!email){ err.textContent = 'Type your email above first, then tap "Forgot password?".'; return; }
+  try{
+    await DB.resetPassword(email);
+    err.className = 'auth-error auth-ok';
+    err.textContent = 'If an account exists for that email, a reset link has been sent.';
+  }catch(e){ err.textContent = authErrorText(e); }
+}
+async function verifyContinue(){
+  const msg = $('verifyMsg'); msg.className = 'auth-error'; msg.textContent = '';
+  try{
+    const u = await DB.refreshUser();
+    if(u.emailVerified) handleUser(u);
+    else msg.textContent = 'Not verified yet. Open the link in the email, then try again.';
+  }catch(e){ msg.textContent = authErrorText(e); }
+}
+async function verifyResend(){
+  const msg = $('verifyMsg');
+  try{ await DB.resendVerification(); msg.className = 'auth-error auth-ok'; msg.textContent = 'Verification email sent.'; }
+  catch(e){ msg.className = 'auth-error'; msg.textContent = authErrorText(e); }
+}
+async function doSignOut(){
+  stopApp();
+  await DB.signOutUser();
+  location.reload();
+}
+
+/* ---------------- App lifecycle ---------------- */
+function handleUser(user){
+  stopApp();
+  if(!user){ state.user = null; show('auth'); return; }
+  state.user = user;
+  if(!user.emailVerified){
+    $('verifyText').textContent = 'We sent a verification link to ' + user.email + '. Open it, then come back here and tap the button below.';
+    show('verify');
+    return;
+  }
+  startApp(user);
+}
+function startApp(user){
+  $('userLine').textContent = 'Signed in as ' + user.email;
+  state.ready = true;
+  show('app');
+  setSyncStatus('Connecting…');
+  const generation = ++appGeneration;
+  unsubBooks = DB.watchBooks(books=>{
+    if(generation !== appGeneration || !state.ready || state.user.uid !== user.uid) return;
+    onBooksChanged(books);
+  }, err=>{
+    if(generation !== appGeneration) return;
+    console.error('books listener', err);
+    setSyncStatus('Khatabook sync failed — check connection');
+  });
+  unsubModes = DB.watchModes((modes, meta)=>{
+    if(generation !== appGeneration || !state.ready || state.user.uid !== user.uid) return;
+    onModesChanged(modes, meta);
+  }, err=>{
+    if(generation !== appGeneration) return;
+    console.error('modes listener', err);
+    setSyncStatus('Sync failed — check connection');
+  });
+  DB.ensureDefaultBook().catch(err=>{
+    console.error('initialize khatabooks', err);
+    if(generation === appGeneration) setSyncStatus('Could not load khatabooks — check connection');
+  });
+  render();
+}
+function stopApp(){
+  appGeneration++;
+  if(unsubBooks){ unsubBooks(); unsubBooks = null; }
+  if(unsubModes){ unsubModes(); unsubModes = null; }
+  if(unsubEntries){ unsubEntries(); unsubEntries = null; }
+  state.ready = false; state.books = []; state.activeBookId = null; state.entries = []; state.modes = [];
+}
+function bookStorageKey(){ return 'khatabooks:last:'+state.user.uid; }
+function rememberedBookId(){
+  try{ return localStorage.getItem(bookStorageKey()); }
+  catch(e){ console.warn('Could not read the last khatabook from this device', e); return null; }
+}
+function rememberBook(id){
+  try{ localStorage.setItem(bookStorageKey(), id); }
+  catch(e){ console.warn('Could not remember the last khatabook on this device', e); }
+}
+function onBooksChanged(books){
+  state.books = books;
+  renderBookSelect();
+  if(booksModalRefresh) booksModalRefresh();
+  const active = books.filter(book=>!book.deletedAt);
+  const currentStillActive = active.some(book=>book.id===state.activeBookId);
+  if(currentStillActive) return;
+  const remembered = rememberedBookId();
+  const next = active.find(book=>book.id===remembered) || active[0];
+  if(next) switchBook(next.id);
+  else{
+    state.activeBookId = null;
+    state.entries = [];
+    if(unsubEntries){ unsubEntries(); unsubEntries = null; }
+    render();
+  }
+}
+function renderBookSelect(){
+  const select = $('bookSelect');
+  const active = state.books.filter(book=>!book.deletedAt);
+  select.innerHTML = '';
+  if(!active.length){
+    const option = document.createElement('option');
+    option.textContent = 'No active khatabooks';
+    select.appendChild(option);
+    select.disabled = true;
+    return;
+  }
+  active.forEach(book=>{
+    const option = document.createElement('option');
+    option.value = book.id;
+    option.textContent = book.name;
+    select.appendChild(option);
+  });
+  select.disabled = false;
+  select.value = active.some(book=>book.id===state.activeBookId) ? state.activeBookId : active[0].id;
+}
+function switchBook(id){
+  const book = state.books.find(item=>item.id===id && !item.deletedAt);
+  if(!book) return;
+  const generation = appGeneration;
+  state.activeBookId = id;
+  rememberBook(id);
+  renderBookSelect();
+  state.entries = [];
+  if(unsubEntries){ unsubEntries(); unsubEntries = null; }
+  const selectedId = id;
+  unsubEntries = DB.watchEntries(selectedId, list=>{
+    if(generation !== appGeneration || state.activeBookId !== selectedId) return;
+    state.entries = normalizeEntries(list);
+    setSyncStatus('Synced ✓ — live');
+    render();
+  }, err=>{
+    if(generation !== appGeneration || state.activeBookId !== selectedId) return;
+    console.error('entries listener', err);
+    setSyncStatus(err && err.code==='permission-denied' ? 'No permission — sign out and in again' : 'Sync failed — check connection');
+  });
+  render();
+}
+function normalizeEntries(list){
+  return list
+    .map(e=>({...e, amount: parseFloat(e.amount), createdAt: parseInt(e.createdAt,10) || 0}))
+    .filter(e=> e.id && !isNaN(e.amount) && (e.type==='gave' || e.type==='got'));
+}
+
+/* ---------------- Khatabooks ---------------- */
+function bookNameError(name, exceptId){
+  if(!name) return 'Enter a khatabook name';
+  if(name.length > 40) return 'Keep the name under 40 characters';
+  if(state.books.some(book=>book.id!==exceptId && book.name.trim().toLowerCase()===name.toLowerCase())) return 'That khatabook name already exists';
+  return '';
+}
+function openBookNameModal(book){
+  const isRename = !!book;
+  const m = makeModal(`
+    <h3>${isRename ? 'Rename khatabook' : 'New khatabook'}</h3>
+    <label class="field-label">Name</label>
+    <input type="text" id="bookNameInput" maxlength="40" placeholder="e.g. Sharma Stores" value="${book ? esc(book.name) : ''}">
+    <div class="auth-error" id="bookNameError"></div>
+    <div class="modal-buttons">
+      <button class="btn-cancel" id="bookNameCancel">Cancel</button>
+      <button class="btn-save" id="bookNameSave">${isRename ? 'Save' : 'Create'}</button>
+    </div>`);
+  const input = m.querySelector('#bookNameInput');
+  const saveButton = m.querySelector('#bookNameSave');
+  input.focus();
+  m.querySelector('#bookNameCancel').onclick = ()=>m.remove();
+  const save = async ()=>{
+    const name = input.value.trim();
+    const error = bookNameError(name, book && book.id);
+    const errorEl = m.querySelector('#bookNameError');
+    if(error){ errorEl.textContent = error; return; }
+    saveButton.disabled = true;
+    errorEl.textContent = '';
+    try{
+      if(isRename){
+        await DB.renameBook(book.id, name);
+        state.books = state.books.map(item=>item.id===book.id ? {...item, name} : item);
+        renderBookSelect();
+      }else{
+        const created = await DB.createBook(name);
+        if(!state.books.some(item=>item.id===created.id)) state.books = [...state.books, created];
+        switchBook(created.id);
+      }
+      if(booksModalRefresh) booksModalRefresh();
+      m.remove();
+      showToast(isRename ? 'Khatabook renamed' : 'Khatabook created');
+    }catch(err){
+      console.error(isRename ? 'rename khatabook' : 'create khatabook', err);
+      errorEl.textContent = err && err.code==='book-name-taken'
+        ? 'That khatabook name already exists'
+        : 'Could not save khatabook — ' + (err && (err.code || err.message) || 'check connection');
+      saveButton.disabled = false;
+    }
+  };
+  saveButton.onclick = save;
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') save(); });
+}
+function deleteActiveBook(){
+  const book = state.books.find(item=>item.id===state.activeBookId && !item.deletedAt);
+  if(!book) return;
+  if(state.books.filter(item=>!item.deletedAt).length<=1){
+    showToast('Keep at least one active khatabook');
+    return;
+  }
+  if(!confirm('Move "'+book.name+'" to History? Its entries can be restored later.')) return;
+  DB.softDeleteBook(book.id).then(()=>showToast('Khatabook moved to History'))
+    .catch(err=>{ console.error('delete khatabook', err); showToast('Could not delete khatabook — ' + (err.code || 'check connection')); });
+}
+function openBookHistoryModal(){
+  const m = makeModal(`
+    <h3>Khatabook History</h3>
+    <div class="entry-meta" style="margin-bottom:8px;">Deleted khatabooks stay here until permanently deleted.</div>
+    <div id="bookHistoryList"></div>
+    <div class="modal-buttons"><button class="btn-cancel" id="bookHistoryClose">Close</button></div>`);
+  const refresh = ()=>{
+    const list = m.querySelector('#bookHistoryList');
+    if(!list) return;
+    list.innerHTML = '';
+    const deleted = state.books.filter(book=>!!book.deletedAt);
+    if(!deleted.length){
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = 'No deleted khatabooks.';
+      list.appendChild(empty);
+      return;
+    }
+    deleted.forEach(book=>{
+      const row = document.createElement('div');
+      row.className = 'member-row';
+      const label = document.createElement('span');
+      label.textContent = book.name;
+      const actions = document.createElement('span');
+      actions.style.display = 'flex';
+      actions.style.gap = '10px';
+      const restore = document.createElement('button');
+      restore.className = 'link-btn';
+      restore.textContent = 'Restore';
+      restore.onclick = async ()=>{
+        restore.disabled = true;
+        try{
+          await DB.restoreBook(book.id);
+          state.books = state.books.map(item=>item.id===book.id ? {...item, deletedAt: undefined} : item);
+          switchBook(book.id);
+          refresh();
+          showToast('Khatabook restored');
+        }catch(err){
+          console.error('restore khatabook', err);
+          restore.disabled = false;
+          showToast('Could not restore khatabook — ' + (err.code || 'check connection'));
+        }
+      };
+      const remove = document.createElement('button');
+      remove.className = 'link-btn';
+      remove.style.color = 'var(--margin-red)';
+      remove.textContent = 'Permanently delete';
+      remove.onclick = async ()=>{
+        if(!confirm('Permanently delete "'+book.name+'" and all its entries? This cannot be undone.')) return;
+        remove.disabled = true;
+        try{
+          await DB.permanentlyDeleteBook(book.id);
+          state.books = state.books.filter(item=>item.id!==book.id);
+          refresh();
+          showToast('Khatabook permanently deleted');
+        }catch(err){
+          console.error('permanently delete khatabook', err);
+          remove.disabled = false;
+          showToast(err.message || 'Could not permanently delete khatabook');
+        }
+      };
+      actions.appendChild(restore);
+      actions.appendChild(remove);
+      row.appendChild(label);
+      row.appendChild(actions);
+      list.appendChild(row);
+    });
+  };
+  booksModalRefresh = refresh;
+  refresh();
+  m.querySelector('#bookHistoryClose').onclick = ()=>{ booksModalRefresh = null; m.remove(); };
+}
+
+/* ---------------- Payment modes ---------------- */
+function onModesChanged(list, meta){
+  state.modes = list;
+  // First sign-in: seed default modes, but only once the SERVER confirms the list is empty.
+  if(list.length===0 && !meta.fromCache && !seeding){
+    seeding = true;
+    DB.seedDefaultModes().catch(e=>console.error('seed modes', e)).finally(()=>{ seeding = false; });
+  }
+  renderModeSelect();
+  updateButtons();
+  if(modesModalRefresh) modesModalRefresh();
+}
+function renderModeSelect(){
+  const sel = $('paymentModeSelect');
+  const want = state.pendingMode || sel.value;
+  state.pendingMode = null;
+  sel.innerHTML = '';
+  const add = (value, text)=>{ const o = document.createElement('option'); o.value = value; o.textContent = text; sel.appendChild(o); };
+  add('', 'Select payment mode…');
+  state.modes.forEach(m=> add(m.name, m.name));
+  add('__add__', '＋ Add new payment mode…');
+  sel.value = state.modes.some(m=>m.name===want) ? want : '';
+}
+function getPaymentMode(){
+  const v = $('paymentModeSelect').value;
+  return (v && v !== '__add__') ? v : null;
+}
+function modeNameError(name){
+  if(!name) return 'Enter a name';
+  if(name.length > 40) return 'Keep it under 40 characters';
+  if(state.modes.some(m=>m.name.toLowerCase()===name.toLowerCase())) return 'That payment mode already exists';
+  if(state.modes.length >= 30) return 'You can have at most 30 payment modes';
+  return '';
+}
+function openAddModeModal(onDone){
+  const m = makeModal(`
+    <h3>New payment mode</h3>
+    <label class="field-label">Name</label>
+    <input type="text" id="newModeName" maxlength="40" placeholder="e.g. HDFC Credit Card">
+    <div class="modal-buttons">
+      <button class="btn-cancel" id="newModeCancel">Cancel</button>
+      <button class="btn-save" id="newModeSave">Add</button>
+    </div>`);
+  const input = m.querySelector('#newModeName'); input.focus();
+  const close = (name)=>{ m.remove(); if(onDone) onDone(name); };
+  m.querySelector('#newModeCancel').onclick = ()=> close(null);
+  const save = ()=>{
+    const name = input.value.trim();
+    const bad = modeNameError(name);
+    if(bad){ showToast(bad); return; }
+    const {promise} = DB.addMode(name);
+    promise.catch(err=>{ console.error(err); showToast('Could not save payment mode'); });
+    close(name);
+  };
+  m.querySelector('#newModeSave').onclick = save;
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') save(); });
+}
+function openModesModal(){
+  const m = makeModal(`
+    <h3>Payment modes</h3>
+    <div class="entry-meta" style="margin-bottom:8px;">Add the cards, banks or wallets you use. Removing a mode does not change past entries.</div>
+    <div id="modesList"></div>
+    <div style="margin-top:12px;">
+      <label class="field-label">Add a payment mode</label>
+      <input type="text" id="modesNewName" maxlength="40" placeholder="e.g. HDFC Credit Card">
+      <div class="modal-buttons" style="margin-top:8px;"><button class="btn-save" id="modesAdd" style="flex:1;">Add</button></div>
+    </div>
+    <div class="modal-buttons"><button class="btn-cancel" id="modesClose">Close</button></div>`);
+  const refresh = ()=>{
+    const list = m.querySelector('#modesList');
+    list.innerHTML = '';
+    state.modes.forEach(mode=>{
+      const row = document.createElement('div');
+      row.className = 'member-row';
+      const label = document.createElement('span'); label.textContent = mode.name;
+      const rm = document.createElement('button');
+      rm.className = 'link-btn'; rm.textContent = 'Remove';
+      rm.onclick = ()=>{
+        if(state.modes.length <= 1){ showToast('Keep at least one payment mode'); return; }
+        if(!confirm('Remove "'+mode.name+'"? Past entries keep it.')) return;
+        DB.removeMode(mode.id).catch(err=>{ console.error(err); showToast('Could not remove'); });
+      };
+      row.appendChild(label); row.appendChild(rm);
+      list.appendChild(row);
+    });
+  };
+  modesModalRefresh = refresh; refresh();
+  const close = ()=>{ modesModalRefresh = null; m.remove(); };
+  m.querySelector('#modesClose').onclick = close;
+  const add = ()=>{
+    const input = m.querySelector('#modesNewName');
+    const name = input.value.trim();
+    const bad = modeNameError(name);
+    if(bad){ showToast(bad); return; }
+    DB.addMode(name).promise.catch(err=>{ console.error(err); showToast('Could not save payment mode'); });
+    input.value = '';
+  };
+  m.querySelector('#modesAdd').onclick = add;
+  m.querySelector('#modesNewName').addEventListener('keydown', e=>{ if(e.key==='Enter') add(); });
+}
+
+/* ---------------- Entry actions ---------------- */
+function addEntry(type){
+  const amount = parseFloat($('amountInput').value);
+  const paymentMode = getPaymentMode();
+  if(!amount || amount<=0 || !paymentMode) return;
+  if(amount >= 1000000000){ showToast('Amount is too large'); return; }
+  const entry = {
+    id: newId(), amount, type,
+    date: isoToDisplay($('dateInput').value || todayStr()),
+    note: $('noteInput').value.trim(), paymentMode, createdAt: Date.now()
+  };
+  $('amountInput').value = ''; $('noteInput').value = '';
+  updateButtons();
+  // Works offline: Firestore queues the write; the live listener shows it immediately.
+  DB.addEntry(state.activeBookId, entry).catch(err=>{ console.error(err); showToast('Could not save — ' + (err.code || 'check connection')); });
+  showToast((type==='gave'?'Gave':'Got')+' '+fmtMoney(amount)+' saved');
+}
+function deleteEntry(id){
+  DB.deleteEntry(state.activeBookId, id).catch(err=>{ console.error(err); showToast('Could not delete — ' + (err.code || 'check connection')); });
+}
+function updateButtons(){
+  const val = parseFloat($('amountInput').value);
+  const enabled = state.activeBookId && val && val>0 && getPaymentMode();
+  $('btnGave').classList.toggle('enabled', !!enabled);
+  $('btnGot').classList.toggle('enabled', !!enabled);
+}
+function computeBalanceMap(){
+  const sorted = [...state.entries].sort((a,b)=>
+    (displayToIso(a.date)+'_'+String(a.createdAt)).localeCompare(displayToIso(b.date)+'_'+String(b.createdAt)));
+  let bal = 0, totalGave = 0, totalGot = 0;
+  const map = {};
+  sorted.forEach(e=>{
+    if(e.type==='gave'){ bal += e.amount; totalGave += e.amount; } else { bal -= e.amount; totalGot += e.amount; }
+    map[e.id] = bal;
+  });
+  return {map, finalBalance: bal, totalGave, totalGot};
+}
+
+/* ---------------- Rendering ---------------- */
+function render(){
+  if(!state.ready) return;
+  renderBalance();
+  renderList();
+  updateButtons();
+}
+function renderBalance(){
+  const {finalBalance, totalGave, totalGot} = computeBalanceMap();
+  const el = $('balanceAmount');
+  el.textContent = (finalBalance < -0.001 ? '−' : '') + fmtMoney(finalBalance);
+  el.className = 'balance-amount ' + (finalBalance > 0.001 ? 'positive' : finalBalance < -0.001 ? 'negative' : 'zero');
+  $('totalGave').textContent = fmtMoney(totalGave);
+  $('totalGot').textContent = fmtMoney(totalGot);
+}
+function closeAllEntryMenus(){ document.querySelectorAll('.entry-menu-dropdown').forEach(d=> d.style.display = 'none'); }
+function renderList(){
+  const container = $('listContainer');
+  if(!state.entries.length){
+    container.innerHTML = '<div class="empty-state">No entries yet. Add your first one above.</div>';
+    return;
+  }
+  const {map} = computeBalanceMap();
+  const byDate = {};
+  state.entries.forEach(e=>{ (byDate[e.date] = byDate[e.date] || []).push(e); });
+  const dates = Object.keys(byDate).sort((a,b)=> displayToIso(a).localeCompare(displayToIso(b))).reverse();
+  container.innerHTML = '';
+  dates.forEach(date=>{
+    const group = document.createElement('div');
+    group.className = 'day-group';
+    byDate[date].sort((a,b)=>b.createdAt-a.createdAt).forEach(e=>{
+      const row = document.createElement('div');
+      row.className = 'entry';
+      row.innerHTML = `
+        <div class="entry-left">
+          <div class="entry-note">${e.note ? esc(e.note) : (e.type==='gave' ? 'You gave' : 'You got')}</div>
+          <div class="entry-meta">${esc(date)}</div>
+          <div class="entry-tag">${esc(e.paymentMode || '—')}</div>
+        </div>
+        <div class="entry-right">
+          <div class="entry-amount ${e.type}">${e.type==='gave'?'−':'+'} ${fmtMoney(e.amount)}</div>
+          <div class="entry-balance">bal ${fmtMoney(map[e.id])}</div>
+        </div>
+        <div class="entry-menu-wrap">
+          <button class="entry-menu-btn">Edit ▾</button>
+          <div class="entry-menu-dropdown" style="display:none;">
+            <button class="menu-item entry-edit-item">Edit</button>
+            <button class="menu-item danger entry-delete-item">Delete</button>
+          </div>
+        </div>`;
+      const dropdown = row.querySelector('.entry-menu-dropdown');
+      row.querySelector('.entry-menu-btn').onclick = ev=>{
+        ev.stopPropagation();
+        const open = dropdown.style.display !== 'none';
+        closeAllEntryMenus();
+        dropdown.style.display = open ? 'none' : 'block';
+      };
+      row.querySelector('.entry-edit-item').onclick = ()=>{ closeAllEntryMenus(); openEditModal(e.id); };
+      row.querySelector('.entry-delete-item').onclick = ()=>{ closeAllEntryMenus(); if(confirm('Delete this entry?')) deleteEntry(e.id); };
+      group.appendChild(row);
+    });
+    container.appendChild(group);
+  });
+}
+
+/* ---------------- Export ---------------- */
+function exportCSV(){
+  const {map} = computeBalanceMap();
+  const q = v => '"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  // Text cells starting with = + - @ could run as formulas in Excel; prefix them so they stay text.
+  const t = v => { const s = String(v==null?'':v); return q(/^[=+\-@]/.test(s) ? "'"+s : s); };
+  const rows = [['Date','Type','Amount','Note','Payment Mode','Balance After'].map(q)];
+  [...state.entries].sort((a,b)=>
+    (displayToIso(a.date)+'_'+String(a.createdAt)).localeCompare(displayToIso(b.date)+'_'+String(b.createdAt))
+  ).forEach(e=>{
+    rows.push([q(e.date), q(e.type==='gave'?'You Gave':'You Got'), q(e.amount), t(e.note), t(e.paymentMode), q(map[e.id])]);
+  });
+  const blob = new Blob([rows.map(r=>r.join(',')).join('\n')], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'my-khata-'+todayStr()+'.csv';
+  a.click(); URL.revokeObjectURL(url);
+}
+
+/* ---------------- Edit entry ---------------- */
+function openEditModal(id){
+  const bookId = state.activeBookId;
+  const entry = state.entries.find(e=>e.id===id);
+  if(!entry) return;
+  const names = state.modes.map(m=>m.name);
+  if(entry.paymentMode && !names.includes(entry.paymentMode)) names.push(entry.paymentMode);   // a removed mode still shows for old entries
+  const m = makeModal(`
+    <h3>Edit Entry</h3>
+    <div class="who-toggle" id="editTypeToggle" style="margin-top:8px;">
+      <div class="who-pill ${entry.type==='gave'?'active':''}" data-type="gave" style="${entry.type==='gave'?'background:var(--margin-red);border-color:var(--margin-red);':''}">You Gave</div>
+      <div class="who-pill ${entry.type==='got'?'active':''}" data-type="got" style="${entry.type==='got'?'background:var(--credit-green);border-color:var(--credit-green);':''}">You Got</div>
+    </div>
+    <label class="field-label">Amount (₹)</label>
+    <input type="number" id="editAmount" value="${entry.amount}" min="0" step="0.01">
+    <label class="field-label">Date</label>
+    <input type="date" id="editDate" value="${displayToIso(entry.date)}">
+    <label class="field-label">Payment Mode</label>
+    <select id="editPaymentMode">
+      ${names.map(n=>`<option value="${esc(n)}" ${n===entry.paymentMode?'selected':''}>${esc(n)}</option>`).join('')}
+    </select>
+    <label class="field-label">Note</label>
+    <input type="text" id="editNote" maxlength="200" value="${esc(entry.note||'')}">
+    <div class="modal-buttons">
+      <button class="btn-cancel" id="cancelEdit">Cancel</button>
+      <button class="btn-save" id="saveEdit">Save Changes</button>
+    </div>`);
+  let editType = entry.type;
+  m.querySelectorAll('#editTypeToggle .who-pill').forEach(p=>{
+    p.onclick = ()=>{
+      editType = p.dataset.type;
+      m.querySelectorAll('#editTypeToggle .who-pill').forEach(x=>{ x.classList.remove('active'); x.style.background=''; x.style.borderColor=''; });
+      p.classList.add('active');
+      const col = editType==='gave' ? 'var(--margin-red)' : 'var(--credit-green)';
+      p.style.background = col; p.style.borderColor = col;
+    };
+  });
+  m.querySelector('#cancelEdit').onclick = ()=> m.remove();
+  m.querySelector('#saveEdit').onclick = ()=>{
+    const amount = parseFloat(m.querySelector('#editAmount').value);
+    const isoDate = m.querySelector('#editDate').value;
+    const note = m.querySelector('#editNote').value.trim();
+    const paymentMode = m.querySelector('#editPaymentMode').value;
+    if(!amount || amount<=0 || amount>=1000000000 || !isoDate || !paymentMode){ showToast('Amount, date and payment mode are required'); return; }
+    const updated = {...entry, amount, date: isoToDisplay(isoDate), note, paymentMode, type: editType};
+    m.remove();
+    DB.updateEntry(bookId, updated).catch(err=>{ console.error(err); showToast('Could not save changes — ' + (err.code || 'check connection')); });
+    showToast('Entry updated');
+  };
+}
+
+/* ---------------- Delete account + all data ---------------- */
+function openDeleteAccountModal(){
+  const needsPassword = DB.usesPassword();
+  const m = makeModal(`
+    <h3 style="color:var(--margin-red);">Delete account &amp; data</h3>
+    <div class="entry-meta" style="margin-bottom:10px;">This permanently erases all your khatabooks, entries and payment modes and deletes your account. It cannot be undone. Tip: use <b>Export CSV</b> first if you want a copy.</div>
+    ${needsPassword ? '<label class="field-label">Your password</label><input type="password" id="delPassword" autocomplete="current-password">' : '<div class="entry-meta" style="margin-bottom:8px;">You will be asked to confirm with Google.</div>'}
+    <label class="field-label">Type DELETE to confirm</label>
+    <input type="text" id="delConfirm" autocomplete="off">
+    <div class="auth-error" id="delMsg"></div>
+    <div class="modal-buttons">
+      <button class="btn-cancel" id="delCancel">Cancel</button>
+      <button class="btn-save" id="delGo" style="background:var(--margin-red);border-color:var(--margin-red);">Delete everything</button>
+    </div>`);
+  m.querySelector('#delCancel').onclick = ()=> m.remove();
+  m.querySelector('#delGo').onclick = async ()=>{
+    const msg = m.querySelector('#delMsg'), go = m.querySelector('#delGo');
+    msg.textContent = '';
+    if(m.querySelector('#delConfirm').value.trim() !== 'DELETE'){ msg.textContent = 'Type DELETE (in capitals) to confirm.'; return; }
+    const pw = needsPassword ? m.querySelector('#delPassword').value : '';
+    if(needsPassword && !pw){ msg.textContent = 'Enter your password.'; return; }
+    go.disabled = true;
+    try{ await DB.reauthenticate(pw); }
+    catch(e){
+      if(e.code!=='auth/popup-closed-by-user' && e.code!=='auth/cancelled-popup-request') msg.textContent = authErrorText(e);
+      go.disabled = false; return;
+    }
+    msg.className = 'auth-error auth-ok'; msg.textContent = 'Deleting… please keep this page open.';
+    stopApp();
+    try{ await DB.eraseEverything(); }
+    catch(e){ console.error(e); alert('Deletion did not finish: ' + authErrorText(e) + '\nThe page will reload; you can try again.'); }
+    location.reload();
+  };
+}
+
+/* ---------------- Event wiring ---------------- */
+$('dateInput').value = todayStr();
+$('amountInput').addEventListener('input', updateButtons);
+$('paymentModeSelect').addEventListener('change', ()=>{
+  const sel = $('paymentModeSelect');
+  if(sel.value === '__add__'){
+    sel.value = '';
+    openAddModeModal(name=>{ if(name){ state.pendingMode = name; renderModeSelect(); updateButtons(); } });
+    return;
+  }
+  updateButtons();
+});
+$('btnGave').addEventListener('click', ()=>addEntry('gave'));
+$('btnGot').addEventListener('click', ()=>addEntry('got'));
+$('bookSelect').addEventListener('change', ()=>switchBook($('bookSelect').value));
+$('exportBtn').addEventListener('click', exportCSV);
+$('newBookBtn').addEventListener('click', ()=>openBookNameModal(null));
+$('renameBookBtn').addEventListener('click', ()=>{
+  const book = state.books.find(item=>item.id===state.activeBookId && !item.deletedAt);
+  if(book) openBookNameModal(book);
+});
+$('deleteBookBtn').addEventListener('click', deleteActiveBook);
+$('bookHistoryBtn').addEventListener('click', openBookHistoryModal);
+$('modesBtn').addEventListener('click', openModesModal);
+$('signOutBtn').addEventListener('click', ()=>{ if(confirm('Sign out of KhataBase?')) doSignOut(); });
+$('deleteAccountBtn').addEventListener('click', openDeleteAccountModal);
+
+$('authSubmit').addEventListener('click', submitAuth);
+$('authToggle').addEventListener('click', ()=> setAuthMode(authMode==='signin' ? 'signup' : 'signin'));
+$('authForgot').addEventListener('click', forgotPassword);
+$('googleBtn').addEventListener('click', googleSignIn);
+['authEmail','authPassword'].forEach(id=> $(id).addEventListener('keydown', e=>{ if(e.key==='Enter') submitAuth(); }));
+$('verifyDone').addEventListener('click', verifyContinue);
+$('verifyResend').addEventListener('click', verifyResend);
+$('verifySignOut').addEventListener('click', doSignOut);
+
+$('menuBtn').addEventListener('click', e=>{
+  e.stopPropagation();
+  const dd = $('menuDropdown'); const open = dd.style.display !== 'none';
+  closeAllEntryMenus();
+  dd.style.display = open ? 'none' : 'block';
+});
+document.addEventListener('click', e=>{
+  const dd = $('menuDropdown');
+  if(dd.style.display !== 'none' && !$('menuBtn').closest('.menu-wrap').contains(e.target)) dd.style.display = 'none';
+  if(!e.target.closest('.entry-menu-wrap')) closeAllEntryMenus();
+});
+document.querySelectorAll('#menuDropdown .menu-item').forEach(item=>{
+  item.addEventListener('click', ()=>{ $('menuDropdown').style.display = 'none'; });
+});
+
+/* ---------------- Start ---------------- */
+setAuthMode('signin');
+show('loading');
+DB.checkRedirect().catch(err=>{ show('auth'); $('authError').textContent = authErrorText(err); });
+DB.onUser(handleUser);
+</script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // A request is allowed only for the signed-in, email-verified owner of /users/{uid}/...
+    function isOwner(uid) {
+      return request.auth != null
+        && request.auth.uid == uid
+        && request.auth.token.email_verified == true;
+    }
+
+    match /users/{uid} {
+
+      // ---------- entries: users/{uid}/entries/{entryId} ----------
+      match /entries/{entryId} {
+        function validEntry(d) {
+          return d.keys().hasOnly(['id', 'date', 'type', 'amount', 'note', 'paymentMode', 'createdAt'])
+            && d.id == entryId
+            && d.date is string && d.date.matches('^[0-9]{2}-[0-9]{2}-[0-9]{4}$')
+            && d.type in ['gave', 'got']
+            && d.amount is number && d.amount > 0 && d.amount < 1000000000
+            && d.note is string && d.note.size() <= 200
+            && d.paymentMode is string && d.paymentMode.size() > 0 && d.paymentMode.size() <= 40
+            && d.createdAt is number;
+        }
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && validEntry(request.resource.data);
+        allow update: if isOwner(uid) && validEntry(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+      }
+
+      // ---------- payment modes: users/{uid}/paymentModes/{modeId} ----------
+      match /paymentModes/{modeId} {
+        function validMode(d) {
+          return d.keys().hasOnly(['name', 'createdAt'])
+            && d.name is string && d.name.size() > 0 && d.name.size() <= 40
+            && d.createdAt is number;
+        }
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validMode(request.resource.data);
+      }
+
+      // ---------- khatabooks: users/{uid}/books/{bookId} ----------
+      match /books/{bookId} {
+        function validBook(d) {
+          return d.keys().hasOnly(['name', 'createdAt', 'deletedAt'])
+            && d.keys().hasAll(['name', 'createdAt'])
+            && d.name is string && d.name.size() > 0 && d.name.size() <= 40
+            && d.createdAt is number
+            && (!('deletedAt' in d) || d.deletedAt is number);
+        }
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && validBook(request.resource.data);
+        allow update: if isOwner(uid) && validBook(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+
+        match /entries/{entryId} {
+          function validEntry(d) {
+            return d.keys().hasOnly(['id', 'date', 'type', 'amount', 'note', 'paymentMode', 'createdAt'])
+              && d.id == entryId
+              && d.date is string && d.date.matches('^[0-9]{2}-[0-9]{2}-[0-9]{4}$')
+              && d.type in ['gave', 'got']
+              && d.amount is number && d.amount > 0 && d.amount < 1000000000
+              && d.note is string && d.note.size() <= 200
+              && d.paymentMode is string && d.paymentMode.size() > 0 && d.paymentMode.size() <= 40
+              && d.createdAt is number;
+          }
+          allow read, delete: if isOwner(uid);
+          allow create: if isOwner(uid) && validEntry(request.resource.data);
+          allow update: if isOwner(uid) && validEntry(request.resource.data)
+            && request.resource.data.createdAt == resource.data.createdAt;
+        }
+      }
+
+      // Name reservations make case-insensitive uniqueness atomic across devices.
+      match /bookNames/{nameKey} {
+        function validReservation(d) {
+          return d.keys().hasOnly(['bookId'])
+            && d.keys().hasAll(['bookId'])
+            && d.bookId is string;
+        }
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validReservation(request.resource.data);
+      }
+    }
+
+    // Everything else (including other users' paths) is denied by default.
+  }
+}
