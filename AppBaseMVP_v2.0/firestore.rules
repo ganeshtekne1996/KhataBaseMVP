@@ -43,10 +43,11 @@ service cloud.firestore {
       // ---------- khatabooks: users/{uid}/books/{bookId} ----------
       match /books/{bookId} {
         function validBook(d) {
-          return d.keys().hasOnly(['name', 'createdAt', 'deletedAt'])
+          return d.keys().hasOnly(['name', 'createdAt', 'deletedAt', 'categoryId'])
             && d.keys().hasAll(['name', 'createdAt'])
             && d.name is string && d.name.size() > 0 && d.name.size() <= 40
             && d.createdAt is number
+            && (!('categoryId' in d) || (d.categoryId is string && d.categoryId.size() > 0))
             && (!('deletedAt' in d) || d.deletedAt is number);
         }
         allow read, delete: if isOwner(uid);
@@ -78,6 +79,31 @@ service cloud.firestore {
           return d.keys().hasOnly(['bookId'])
             && d.keys().hasAll(['bookId'])
             && d.bookId is string;
+        }
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid) && validReservation(request.resource.data);
+      }
+
+      // ---------- book categories: users/{uid}/categories/{categoryId} ----------
+      match /categories/{categoryId} {
+        function validCategory(d) {
+          return d.keys().hasOnly(['name', 'createdAt'])
+            && d.keys().hasAll(['name', 'createdAt'])
+            && d.name is string && d.name.size() > 0 && d.name.size() <= 40
+            && d.createdAt is number;
+        }
+        allow read, delete: if isOwner(uid);
+        allow create: if isOwner(uid) && validCategory(request.resource.data);
+        allow update: if isOwner(uid) && validCategory(request.resource.data)
+          && request.resource.data.createdAt == resource.data.createdAt;
+      }
+
+      // Name reservations make case-insensitive category names unique across devices.
+      match /categoryNames/{nameKey} {
+        function validReservation(d) {
+          return d.keys().hasOnly(['categoryId'])
+            && d.keys().hasAll(['categoryId'])
+            && d.categoryId is string;
         }
         allow read, delete: if isOwner(uid);
         allow create, update: if isOwner(uid) && validReservation(request.resource.data);

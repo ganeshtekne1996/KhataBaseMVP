@@ -9,8 +9,9 @@ Currency is ₹ (Indian digit grouping).
 ## 2. Privacy-first design
 - Data lives only under `users/{uid}/...`; rules allow just that signed-in, email-verified user.
 - Nothing about other users is ever loaded; account email is stored only in Firebase Auth, not in the app database. User-entered khatabook names are stored with their ledgers.
-- No analytics, ads, trackers, or Google Fonts (system fonts) — no third-party requests besides Firebase.
-- Sign-out erases the browser's offline copy; `Referrer-Policy: no-referrer`, `nosniff`, framing disabled, camera/mic/location denied via headers.
+- No analytics, ads, trackers, or Google Fonts (system fonts). Receipt OCR runs on-device using locally hosted Tesseract.js and English/Hindi language data.
+- Receipt images are processed only in the browser and are never uploaded or saved by the scanner. The app camera permission is limited to this site.
+- Sign-out erases the browser's offline copy; `Referrer-Policy: no-referrer`, `nosniff`, framing disabled, microphone/location denied via headers.
 - **Delete account & data** removes all khatabooks, entries, payment modes and the account (re-authentication + typing DELETE required).
 - CSV export neutralises spreadsheet-formula text (`= + - @`) in notes/payment modes.
 - User-entered text is HTML-escaped when rendered.
@@ -22,6 +23,9 @@ Currency is ₹ (Indian digit grouping).
 
 **Khatabooks:** Separate ledgers can be created for vendors, categories or any other purpose. Switch books from the selector at the top. Create and rename names (case-insensitive duplicates are blocked); stable book IDs keep entries intact when renamed. Deleting moves a book to History, where it can be restored or permanently deleted with all its entries. The last active book cannot be deleted. The selected book is remembered in device-local storage for each account. Existing entries stay in the original default book.
 
+**Book categories:** Organize khatabooks into named categories from the top-left category switcher. Categories can be created, renamed and deleted; deleting a category prompts to move its books to another category or archive them in History and move them. New khatabooks use the selected category, and moving a book leaves its entries intact. The last selected category and last khatabook in each category are remembered on the device. Existing books are assigned to a “General” category without rewriting entries; existing default categories named “Uncategorized” are renamed to “General”.
+**Category setup:** No new API server or dependency is required. Deploy the updated Firestore rules (`firebase deploy --only firestore:rules`) before using category writes; existing accounts migrate automatically when online.
+
 **Balance:** Net Expenses = Gave − Got (coloured), plus Gave and Got totals.
 
 **Payment modes (per user, add/remove):**
@@ -29,6 +33,8 @@ Currency is ₹ (Indian digit grouping).
 - Add from the entry form ("＋ Add new payment mode…", which then selects it) or from **Menu → Payment modes**.
 - Remove from Menu → Payment modes. At least one must remain; max 30; names up to 40 chars; duplicates (case-insensitive) blocked.
 - Entries store the mode name as text, so removing a mode never alters past entries; editing an old entry still shows its original mode.
+
+**Receipt scanning:** Use **Scan bill on this device** to capture or select a receipt image. Tesseract.js reads English and Hindi text on-device; local rules suggest a total, date, merchant/note, and a payment mode only when it matches an existing mode. The photo is never sent to an OCR or AI service. OCR has no per-scan service charge, but requires device processing and an initial download of the local engine/language files. The user reviews suggestions and chooses **YOU GAVE** or **YOU GOT** to save.
 
 **Export:** CSV of entries in the selected khatabook (Date, Type, Amount, Note, Payment Mode, Balance After).
 
@@ -41,13 +47,16 @@ Currency is ₹ (Indian digit grouping).
 | Auth | Firebase Authentication (Google, Email/Password, verification) |
 | Database | Cloud Firestore with persistent local cache |
 | Hosting | Firebase Hosting |
+| Receipt OCR | Tesseract.js in the browser using locally hosted WebAssembly and English/Hindi models |
 | SDK | Firebase JS 10.12.2 ES modules from `gstatic.com` |
 
 ## 5. Files
 | File | Purpose |
 |---|---|
 | `public/index.html` | Views (sign-in, verify, app), styles, state, rendering, modals |
-| `public/db.js` | Auth, khatabooks, entries, payment modes, delete-everything |
+| `public/db.js` | Auth, categories, khatabooks, entries, payment modes, delete-everything |
+| `public/receipt-parser.mjs` | Rule-based receipt field extraction from OCR text |
+| `public/vendor/tesseract/` | Locally hosted OCR worker, WebAssembly core and language models |
 | `public/firebase-config.js` | Firebase web config |
 | `public/sw.js` | Service worker (`CACHE_NAME` bumped per release) |
 | `public/manifest.json` | PWA manifest ("KhataBase") |
@@ -65,22 +74,27 @@ users/{uid}/entries/{entryId}
 users/{uid}/paymentModes/{modeId}
     name, createdAt(ms)          (defaults use fixed ids: cash, upi, debit-card, credit-card, net-banking)
 users/{uid}/books/{bookId}
-    name, createdAt(ms), deletedAt(ms, optional)
+    name, createdAt(ms), categoryId, deletedAt(ms, optional)
 users/{uid}/books/{bookId}/entries/{entryId}
     id, date, type, amount, note, paymentMode, createdAt
 users/{uid}/bookNames/{encodedLowercaseName}
     bookId                    (unique name reservation; deleted books keep their reservation)
+users/{uid}/categories/{categoryId}
+    name, createdAt(ms)
+users/{uid}/categoryNames/{encodedLowercaseName}
+    categoryId                (unique category-name reservation)
 ```
 The stable `default` book continues to use the original `users/{uid}/entries` collection so existing users' entries remain available without an online migration.
 
 ## 7. `db.js` API
 Auth: `onUser, currentUser, usesPassword, signInGoogle, signUpEmail, signInEmail, resendVerification, refreshUser, resetPassword, signOutUser, checkRedirect, reauthenticate, eraseEverything`.
-Khatabooks: `ensureDefaultBook, watchBooks, createBook, renameBook, softDeleteBook, restoreBook, permanentlyDeleteBook`.
+Khatabooks: `ensureDefaultBook, watchBooks, createBook(name, categoryId), renameBook, moveBookToCategory, softDeleteBook, restoreBook, permanentlyDeleteBook`.
+Categories: `ensureDefaultCategory, watchCategories, createCategory, renameCategory, deleteCategory`.
 Entries: `watchEntries(bookId, ...), addEntry(bookId, ...), updateEntry(bookId, ...), deleteEntry(bookId, ...)`.
 Modes: `watchModes, seedDefaultModes, addMode, removeMode`.
 
 ## 8. Known limitations
-No extra app PIN lock; offline copy persists until sign-out; public sign-up (rely on quotas + App Check); list items can't be validated in rules (hence one document per payment mode); account recovery depends on email; not load-tested. Creating or renaming khatabooks requires a network connection for transactional name reservations; entry operations remain offline-capable.
+No extra app PIN lock; offline copy persists until sign-out; public sign-up (rely on quotas + App Check); list items can't be validated in rules (hence one document per payment mode); account recovery depends on email; not load-tested. Creating or renaming khatabooks and categories requires a network connection for transactional name reservations; deleting categories requires a connection. Entry operations and moving books remain offline-capable.
 
 ## 9. Ideas for later
 App PIN/biometric lock and auto-sign-out after inactivity; search and monthly summaries; CSV import; encrypted notes (client-side) for maximum privacy.

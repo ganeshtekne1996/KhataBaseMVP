@@ -25,7 +25,10 @@
 <p>Data is stored in Google Cloud Firestore and travels over HTTPS. Security rules allow only the signed-in, email-verified owner of an account to read or write that account's data. Anyone operating the app (including us) should not access your entries other than for support you request or where the law requires.</p>
 
 <h2>Who processes your data</h2>
-<p>We use Google Firebase (Authentication, Cloud Firestore, Hosting) as our infrastructure provider. Google processes data on our behalf under its own terms. We do not share your data with anyone else.</p>
+<p>We use Google Firebase (Authentication, Cloud Firestore and Hosting). Google processes account and ledger data on our behalf under its own terms. We do not send receipt images to Google Cloud or any OCR/AI provider.</p>
+
+<h2>Receipt scanning</h2>
+<p>If you choose to scan a bill, Tesseract.js and its English/Hindi language data run locally in your browser to read the selected image. The image is not uploaded or saved by the scanner. The OCR engine and language files are served from this app's hosting and may be downloaded the first time you scan. Review all extracted details before saving an entry.</p>
 
 <h2>On your device</h2>
 <p>To work offline, the app keeps a copy of your data in your browser's storage (IndexedDB). It also saves the last selected khatabook on that device in local storage, separately for each account. <b>Signing out erases the offline database copy.</b> On a shared or public device always sign out. The app does not use advertising or analytics cookies, and loads no third-party fonts or trackers.</p>

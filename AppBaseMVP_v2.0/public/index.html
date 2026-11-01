@@ -99,16 +99,6 @@
   .balance-amount.negative{ color:#E48989; }
   .balance-amount.zero{ color:var(--gold); }
   .balance-sub{ font-size:11.5px; color:#9BA5B5; }
-  .mini-tally{
-    display:flex;
-    justify-content:center;
-    gap:18px;
-    margin-top:10px;
-    font-size:11.5px;
-    color:#B9C2D0;
-  }
-  .mini-tally b{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
-
   .form-card{
     position:relative; z-index:1;
     background:var(--paper-2);
@@ -147,9 +137,56 @@
     display:flex; gap:6px; align-items:center;
     margin-bottom:14px;
   }
+  .app-brand{
+    margin:0 0 10px;
+    color:var(--ink-navy);
+    font-family:Georgia,'Times New Roman',serif;
+    font-size:12px;
+    font-weight:700;
+    text-align:center;
+  }
   .book-row select{ flex:1; min-width:0; font-family:Georgia,'Times New Roman',serif; font-weight:500; }
+  .category-switch-wrap{ position:relative; flex-shrink:0; }
+  .category-switch{
+    display:flex; align-items:center; gap:5px; max-width:142px;
+    border:1px solid var(--ink-navy); border-radius:8px;
+    background:#fff; color:var(--ink-navy); padding:7px 8px;
+    font:600 12px system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+    cursor:pointer;
+  }
+  .category-switch:hover,.category-switch:focus-visible{ background:var(--paper-2); }
+  .category-switch:focus-visible,.category-option:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+  .category-switch-name{ overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  .category-switch-icon{ font-size:12px; line-height:1; }
+  .category-dropdown{
+    position:absolute; top:calc(100% + 6px); left:0; z-index:40;
+    width:min(270px, calc(100vw - 56px)); max-height:55vh; overflow-y:auto;
+    padding:5px; background:#fff; border:1px solid var(--rule); border-radius:10px;
+    box-shadow:0 8px 24px rgba(30,90,140,.2);
+    opacity:0; transform:translateY(-5px); transition:opacity .14s ease, transform .14s ease;
+  }
+  .category-dropdown[hidden]{ display:none; }
+  .category-dropdown.open{ opacity:1; transform:translateY(0); }
+  .category-option{
+    display:flex; justify-content:space-between; align-items:center; gap:10px;
+    width:100%; min-height:40px; padding:9px 10px; text-align:left;
+    border:0; border-radius:6px; background:#fff; color:var(--text-dark);
+    font:13px system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif; cursor:pointer;
+  }
+  .category-option:hover,.category-option[aria-checked="true"]{ background:var(--paper-2); }
+  .category-option[aria-checked="true"]{ color:var(--ink-navy); font-weight:650; }
+  .category-option-name{ min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  .category-option.create-category{ color:var(--ink-navy); border-top:1px solid var(--rule); border-radius:0 0 6px 6px; margin-top:4px; }
+  .category-empty{
+    position:relative; z-index:1; padding:28px 14px; margin-bottom:16px;
+    border:1px dashed var(--rule); border-radius:10px; text-align:center;
+    color:var(--text-muted); font-size:13px;
+  }
+  @media (prefers-reduced-motion:reduce){ .category-dropdown{ transition:none; } }
 
   .menu-wrap{ position:relative; flex-shrink:0; z-index:30; }
+  .menu-icon-btn{ display:inline-flex; width:34px; height:34px; align-items:center; justify-content:center; padding:0; border-radius:50%; }
+  .menu-icon-btn svg{ width:19px; height:19px; }
   .menu-dropdown{
     position:absolute; top:calc(100% + 6px); right:0;
     background:#fff; border:1px solid var(--rule); border-radius:10px;
@@ -187,6 +224,12 @@
   }
 
   .action-row{ display:flex; gap:8px; margin-top:4px; }
+  .payment-mode-heading{ margin-bottom:3px; }
+  .payment-mode-select-row{ display:flex; align-items:center; gap:8px; }
+  .payment-mode-select-row select{ flex:1; min-width:0; }
+  .receipt-scan{ display:inline-flex; flex:0 0 30px; align-items:center; justify-content:center; width:30px; height:26px; padding:3px; border:1px solid #D7C8FF; border-radius:6px; background:#F0EAFE; cursor:pointer; }
+  .receipt-scan svg{ width:17px; height:17px; }
+  .receipt-scan:disabled{ opacity:.6; cursor:wait; }
   .btn-action{
     flex:1;
     border:none;
@@ -371,16 +414,30 @@
 
     <!-- ============ Main app ============ -->
     <div id="mainUI" style="display:none;">
+      <div class="app-brand">KhataBase</div>
       <div class="book-row">
-        <div style="font-family:Georgia,'Times New Roman',serif; font-weight:700; font-size:20px; color:var(--ink-navy);">KhataBase</div>
+        <div class="category-switch-wrap">
+          <button class="category-switch" id="categorySwitch" type="button" aria-label="Choose category" aria-haspopup="menu" aria-expanded="false" aria-controls="categoryDropdown">
+            <span class="category-switch-icon" aria-hidden="true">▾</span>
+            <span class="category-switch-name" id="activeCategoryName">Loading…</span>
+          </button>
+          <div class="category-dropdown" id="categoryDropdown" role="menu" aria-label="Book categories" hidden></div>
+        </div>
         <select id="bookSelect" aria-label="Select khatabook"><option>Loading books…</option></select>
         <div class="menu-wrap">
-          <button class="btn-settings" id="menuBtn">Menu ▾</button>
+          <button class="btn-settings menu-icon-btn" id="menuBtn" type="button" aria-label="Settings" title="Settings" aria-expanded="false" aria-controls="menuDropdown">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z"></path>
+              <path d="m19.4 15 .1.1a1.8 1.8 0 0 1-2.5 2.5l-.1-.1a1.8 1.8 0 0 0-3 .9v.2a1.8 1.8 0 0 1-3.6 0v-.2a1.8 1.8 0 0 0-3-.9l-.1.1a1.8 1.8 0 0 1-2.5-2.5l.1-.1a1.8 1.8 0 0 0-.9-3H3.7a1.8 1.8 0 0 1 0-3.6h.2a1.8 1.8 0 0 0 .9-3l-.1-.1a1.8 1.8 0 0 1 2.5-2.5l.1.1a1.8 1.8 0 0 0 3-.9v-.2a1.8 1.8 0 0 1 3.6 0v.2a1.8 1.8 0 0 0 3 .9l.1-.1a1.8 1.8 0 0 1 2.5 2.5l-.1.1a1.8 1.8 0 0 0 .9 3h.2a1.8 1.8 0 0 1 0 3.6h-.2a1.8 1.8 0 0 0-.9 3Z"></path>
+            </svg>
+          </button>
           <div class="menu-dropdown" id="menuDropdown" style="display:none;">
             <button class="menu-item" id="newBookBtn">New khatabook</button>
             <button class="menu-item" id="renameBookBtn">Rename khatabook</button>
+            <button class="menu-item" id="moveBookBtn">Move khatabook to category</button>
             <button class="menu-item danger" id="deleteBookBtn">Move khatabook to History</button>
             <button class="menu-item" id="bookHistoryBtn">History</button>
+            <button class="menu-item" id="manageCategoriesBtn">Manage categories</button>
             <button class="menu-item" id="modesBtn">Payment modes</button>
             <button class="menu-item" id="signOutBtn">Sign out</button>
             <button class="menu-item danger" id="deleteAccountBtn">Delete account &amp; data</button>
@@ -388,17 +445,15 @@
         </div>
       </div>
 
+      <div id="ledgerArea">
       <div class="balance-card">
-        <div class="balance-label">Net Expenses</div>
+        <div class="balance-label">Total Expenses</div>
         <div class="balance-amount zero" id="balanceAmount">₹0</div>
-        <div class="mini-tally">
-          <div>Gave: <b id="totalGave">₹0</b></div>
-          <div>Got: <b id="totalGot">₹0</b></div>
-        </div>
       </div>
       <div class="subtitle" id="syncStatus" style="text-align:center; margin:-10px 0 14px;"></div>
 
       <div class="form-card" id="formCard">
+        <input id="receiptInput" type="file" accept="image/*" capture="environment" hidden>
         <div class="form-row">
           <div>
             <label class="field-label">Amount (₹)</label>
@@ -411,8 +466,21 @@
         </div>
         <div class="form-row">
           <div>
-            <label class="field-label">Payment Mode *</label>
-            <select id="paymentModeSelect"><option value="">Select payment mode…</option></select>
+            <div class="payment-mode-heading">
+              <label class="field-label" for="paymentModeSelect">Payment Mode *</label>
+            </div>
+            <div class="payment-mode-select-row">
+              <select id="paymentModeSelect"><option value="">Select payment mode…</option></select>
+              <button class="receipt-scan" id="scanReceiptBtn" type="button" aria-label="Scan bill on this device" title="Scan bill on this device">
+                <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 7h3l1.5-2h7L17 7h3v12H4z" fill="#8061D9" stroke="#6747C4" stroke-width="1.4"></path>
+                  <path d="M8.5 7 9.4 5h5.2l.9 2" fill="#F39A63" stroke="#F39A63" stroke-width="1.2"></path>
+                  <circle cx="12" cy="13" r="3.7" fill="#7ED8D0" stroke="#FFFFFF" stroke-width="1.5"></circle>
+                  <circle cx="12" cy="13" r="1.7" fill="#FFFFFF" stroke="#5B9EBD" stroke-width="1"></circle>
+                  <circle cx="18" cy="9" r="1" fill="#FFE17A"></circle>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
         <div class="form-row">
@@ -433,6 +501,11 @@
       </div>
 
       <div id="listContainer"><div class="empty-state">Loading entries…</div></div>
+      </div>
+      <div id="categoryEmptyState" class="category-empty" style="display:none;">
+        <div>This category has no khatabooks yet.</div>
+        <button class="btn-save" id="emptyCategoryCreate" style="margin-top:12px;">Create a khatabook</button>
+      </div>
 
       <div class="auth-legal" style="margin-top:22px;">
         <span id="userLine"></span><br>
@@ -449,15 +522,17 @@
 
 <div class="toast" id="toast"></div>
 <script type="module">
-import * as DB from './db.js?v=multi-books-1';
+import Tesseract from './vendor/tesseract/tesseract.esm.min.js';
+import { parseReceiptText } from './receipt-parser.mjs';
+import * as DB from './db.js?v=categories-1';
 
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   window.addEventListener('load', ()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
 }
 
 /* ---------------- State ---------------- */
-const state = { user: null, books: [], activeBookId: null, entries: [], modes: [], ready: false, pendingMode: null };
-let unsubBooks = null, unsubEntries = null, unsubModes = null, seeding = false, authMode = 'signin', modesModalRefresh = null, booksModalRefresh = null, appGeneration = 0;
+const state = { user: null, books: [], categories: [], activeCategoryId: null, activeBookId: null, entries: [], modes: [], ready: false, pendingMode: null };
+let unsubBooks = null, unsubCategories = null, unsubEntries = null, unsubModes = null, seeding = false, authMode = 'signin', modesModalRefresh = null, booksModalRefresh = null, categoriesModalRefresh = null, categoryCloseTimer = null, appGeneration = 0;
 
 /* ---------------- Helpers ---------------- */
 const $ = id => document.getElementById(id);
@@ -593,6 +668,14 @@ function startApp(user){
   show('app');
   setSyncStatus('Connecting…');
   const generation = ++appGeneration;
+  unsubCategories = DB.watchCategories(categories=>{
+    if(generation !== appGeneration || !state.ready || state.user.uid !== user.uid) return;
+    onCategoriesChanged(categories);
+  }, err=>{
+    if(generation !== appGeneration) return;
+    console.error('categories listener', err);
+    setSyncStatus('Category sync failed — check connection');
+  });
   unsubBooks = DB.watchBooks(books=>{
     if(generation !== appGeneration || !state.ready || state.user.uid !== user.uid) return;
     onBooksChanged(books);
@@ -609,35 +692,65 @@ function startApp(user){
     console.error('modes listener', err);
     setSyncStatus('Sync failed — check connection');
   });
-  DB.ensureDefaultBook().catch(err=>{
-    console.error('initialize khatabooks', err);
-    if(generation === appGeneration) setSyncStatus('Could not load khatabooks — check connection');
+  DB.ensureDefaultBook().then(()=>DB.ensureDefaultCategory()).catch(err=>{
+    console.error('initialize khatabooks and categories', err);
+    if(generation === appGeneration) setSyncStatus('Could not load categories — check connection');
   });
   render();
 }
 function stopApp(){
   appGeneration++;
   if(unsubBooks){ unsubBooks(); unsubBooks = null; }
+  if(unsubCategories){ unsubCategories(); unsubCategories = null; }
   if(unsubModes){ unsubModes(); unsubModes = null; }
   if(unsubEntries){ unsubEntries(); unsubEntries = null; }
-  state.ready = false; state.books = []; state.activeBookId = null; state.entries = []; state.modes = [];
+  state.ready = false; state.books = []; state.categories = []; state.activeCategoryId = null; state.activeBookId = null; state.entries = []; state.modes = [];
 }
-function bookStorageKey(){ return 'khatabooks:last:'+state.user.uid; }
-function rememberedBookId(){
-  try{ return localStorage.getItem(bookStorageKey()); }
+function bookStorageKey(categoryId=state.activeCategoryId){ return 'khatabooks:last:'+state.user.uid+':'+categoryId; }
+function rememberedBookId(categoryId=state.activeCategoryId){
+  try{
+    const stored = localStorage.getItem(bookStorageKey(categoryId));
+    return stored || (categoryId==='cat_default' ? localStorage.getItem('khatabooks:last:'+state.user.uid) : null);
+  }
   catch(e){ console.warn('Could not read the last khatabook from this device', e); return null; }
 }
 function rememberBook(id){
-  try{ localStorage.setItem(bookStorageKey(), id); }
+  try{
+    localStorage.setItem(bookStorageKey(), id);
+    if(state.activeCategoryId==='cat_default') localStorage.setItem('khatabooks:last:'+state.user.uid, id);
+  }
   catch(e){ console.warn('Could not remember the last khatabook on this device', e); }
 }
-function onBooksChanged(books){
-  state.books = books;
+function onCategoriesChanged(categories){
+  const generalNameTaken = categories.some(category=>
+    category.id!=='cat_default' && category.name.toLowerCase()==='general');
+  state.categories = categories.map(category=>
+    !generalNameTaken && category.id==='cat_default' && category.name==='Uncategorized'
+      ? {...category, name:'General'}
+      : category);
+  if(categoriesModalRefresh) categoriesModalRefresh();
+  if(!state.categories.some(category=>category.id===state.activeCategoryId)){
+    let remembered = null;
+    try{ remembered = localStorage.getItem('khatabooks:category:'+state.user.uid); }
+    catch(e){ console.warn('Could not read the last category from this device', e); }
+    state.activeCategoryId = state.categories.some(category=>category.id===remembered)
+      ? remembered
+      : (state.categories.find(category=>category.id==='cat_default') || state.categories[0] || {}).id || null;
+  }
+  renderCategoryDropdown();
+  reconcileBookSelection();
+}
+function rememberCategory(id){
+  try{ localStorage.setItem('khatabooks:category:'+state.user.uid, id); }
+  catch(e){ console.warn('Could not remember the last category on this device', e); }
+}
+function booksInActiveCategory(){
+  return state.books.filter(book=>!book.deletedAt && (book.categoryId || 'cat_default')===state.activeCategoryId);
+}
+function reconcileBookSelection(){
   renderBookSelect();
-  if(booksModalRefresh) booksModalRefresh();
-  const active = books.filter(book=>!book.deletedAt);
-  const currentStillActive = active.some(book=>book.id===state.activeBookId);
-  if(currentStillActive) return;
+  const active = booksInActiveCategory();
+  if(active.some(book=>book.id===state.activeBookId)) return;
   const remembered = rememberedBookId();
   const next = active.find(book=>book.id===remembered) || active[0];
   if(next) switchBook(next.id);
@@ -648,13 +761,18 @@ function onBooksChanged(books){
     render();
   }
 }
+function onBooksChanged(books){
+  state.books = books;
+  if(booksModalRefresh) booksModalRefresh();
+  reconcileBookSelection();
+}
 function renderBookSelect(){
   const select = $('bookSelect');
-  const active = state.books.filter(book=>!book.deletedAt);
+  const active = booksInActiveCategory();
   select.innerHTML = '';
   if(!active.length){
     const option = document.createElement('option');
-    option.textContent = 'No active khatabooks';
+    option.textContent = state.activeCategoryId ? 'No khatabooks in this category' : 'Loading khatabooks…';
     select.appendChild(option);
     select.disabled = true;
     return;
@@ -668,9 +786,53 @@ function renderBookSelect(){
   select.disabled = false;
   select.value = active.some(book=>book.id===state.activeBookId) ? state.activeBookId : active[0].id;
 }
+function renderCategoryDropdown(){
+  const dropdown = $('categoryDropdown');
+  const selected = state.categories.find(category=>category.id===state.activeCategoryId);
+  $('activeCategoryName').textContent = selected ? selected.name : 'Categories';
+  dropdown.innerHTML = '';
+  state.categories.forEach(category=>{
+    const option = document.createElement('button');
+    option.type = 'button';
+    option.className = 'category-option';
+    option.setAttribute('role','menuitemradio');
+    option.setAttribute('aria-checked',String(category.id===state.activeCategoryId));
+    option.title = category.name;
+    option.innerHTML = '<span class="category-option-name"></span><span aria-hidden="true">'+(category.id===state.activeCategoryId?'✓':'')+'</span>';
+    option.querySelector('.category-option-name').textContent = category.name;
+    option.addEventListener('click',()=>switchCategory(category.id));
+    dropdown.appendChild(option);
+  });
+  const create = document.createElement('button');
+  create.type = 'button';
+  create.className = 'category-option create-category';
+  create.setAttribute('role','menuitem');
+  create.textContent = '+ Create new category';
+  create.addEventListener('click',()=>{
+    closeCategoryDropdown();
+    openCategoryNameModal(null);
+  });
+  dropdown.appendChild(create);
+}
+function closeCategoryDropdown(){
+  const dropdown = $('categoryDropdown');
+  if(dropdown.hidden) return;
+  dropdown.classList.remove('open');
+  $('categorySwitch').setAttribute('aria-expanded','false');
+  clearTimeout(categoryCloseTimer);
+  categoryCloseTimer = setTimeout(()=>{ dropdown.hidden = true; },150);
+}
+function switchCategory(id){
+  if(!state.categories.some(category=>category.id===id)) return;
+  state.activeCategoryId = id;
+  rememberCategory(id);
+  renderCategoryDropdown();
+  closeCategoryDropdown();
+  reconcileBookSelection();
+}
 function switchBook(id){
   const book = state.books.find(item=>item.id===id && !item.deletedAt);
-  if(!book) return;
+  if(!book || (book.categoryId || 'cat_default')!==state.activeCategoryId) return;
   const generation = appGeneration;
   state.activeBookId = id;
   rememberBook(id);
@@ -681,7 +843,7 @@ function switchBook(id){
   unsubEntries = DB.watchEntries(selectedId, list=>{
     if(generation !== appGeneration || state.activeBookId !== selectedId) return;
     state.entries = normalizeEntries(list);
-    setSyncStatus('Synced ✓ — live');
+    setSyncStatus('');
     render();
   }, err=>{
     if(generation !== appGeneration || state.activeBookId !== selectedId) return;
@@ -704,6 +866,10 @@ function bookNameError(name, exceptId){
   return '';
 }
 function openBookNameModal(book){
+  if(!book && !state.activeCategoryId){
+    showToast('Wait for categories to finish loading');
+    return;
+  }
   const isRename = !!book;
   const m = makeModal(`
     <h3>${isRename ? 'Rename khatabook' : 'New khatabook'}</h3>
@@ -731,7 +897,7 @@ function openBookNameModal(book){
         state.books = state.books.map(item=>item.id===book.id ? {...item, name} : item);
         renderBookSelect();
       }else{
-        const created = await DB.createBook(name);
+        const created = await DB.createBook(name, state.activeCategoryId);
         if(!state.books.some(item=>item.id===created.id)) state.books = [...state.books, created];
         switchBook(created.id);
       }
@@ -748,6 +914,199 @@ function openBookNameModal(book){
   };
   saveButton.onclick = save;
   input.addEventListener('keydown', e=>{ if(e.key==='Enter') save(); });
+}
+function categoryNameError(name, exceptId){
+  if(!name) return 'Enter a category name';
+  if(name.length > 40) return 'Keep the name under 40 characters';
+  if(state.categories.some(category=>category.id!==exceptId && category.name.trim().toLowerCase()===name.toLowerCase())) return 'That category name already exists';
+  return '';
+}
+function openCategoryNameModal(category){
+  const isRename = !!category;
+  const m = makeModal(`
+    <h3>${isRename ? 'Rename category' : 'Create category'}</h3>
+    <label class="field-label" for="categoryNameInput">Name</label>
+    <input type="text" id="categoryNameInput" maxlength="40" placeholder="e.g. Fiction, Study" value="${category ? esc(category.name) : ''}">
+    <div class="auth-error" id="categoryNameError" role="alert"></div>
+    <div class="modal-buttons">
+      <button class="btn-cancel" id="categoryNameCancel">Cancel</button>
+      <button class="btn-save" id="categoryNameSave">${isRename ? 'Save' : 'Create'}</button>
+    </div>`);
+  const input = m.querySelector('#categoryNameInput');
+  const saveButton = m.querySelector('#categoryNameSave');
+  input.focus();
+  m.querySelector('#categoryNameCancel').onclick = ()=>m.remove();
+  const save = async ()=>{
+    const name = input.value.trim();
+    const errorEl = m.querySelector('#categoryNameError');
+    const error = categoryNameError(name, category && category.id);
+    if(error){ errorEl.textContent = error; return; }
+    saveButton.disabled = true;
+    errorEl.textContent = '';
+    try{
+      if(isRename){
+        await DB.renameCategory(category.id, name);
+        state.categories = state.categories.map(item=>item.id===category.id ? {...item, name} : item);
+        renderCategoryDropdown();
+        if(categoriesModalRefresh) categoriesModalRefresh();
+      }else{
+        const created = await DB.createCategory(name);
+        if(!state.categories.some(item=>item.id===created.id)) state.categories = [...state.categories, created];
+        if(categoriesModalRefresh) categoriesModalRefresh();
+        switchCategory(created.id);
+      }
+      m.remove();
+      showToast(isRename ? 'Category renamed' : 'Category created');
+    }catch(err){
+      console.error(isRename ? 'rename category' : 'create category', err);
+      errorEl.textContent = err && err.code==='category-name-taken'
+        ? 'That category name already exists'
+        : 'Could not save category — ' + (err && (err.code || err.message) || 'check connection');
+      saveButton.disabled = false;
+    }
+  };
+  saveButton.onclick = save;
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter') save(); });
+}
+function openCategoriesModal(){
+  const m = makeModal(`
+    <h3>Manage categories</h3>
+    <div class="entry-meta" style="margin-bottom:8px;">Each khatabook belongs to one category. Deleting a category lets you move its books or archive them in History.</div>
+    <div id="categoriesList"></div>
+    <div class="modal-buttons">
+      <button class="btn-cancel" id="categoriesClose">Close</button>
+      <button class="btn-save" id="categoriesCreate">＋ Create category</button>
+    </div>`);
+  const refresh = ()=>{
+    const list = m.querySelector('#categoriesList');
+    if(!list) return;
+    list.innerHTML = '';
+    state.categories.forEach(category=>{
+      const row = document.createElement('div');
+      row.className = 'member-row';
+      const label = document.createElement('span');
+      label.textContent = category.name;
+      const actions = document.createElement('span');
+      actions.style.display = 'flex';
+      actions.style.gap = '10px';
+      const rename = document.createElement('button');
+      rename.className = 'link-btn';
+      rename.textContent = 'Rename';
+      rename.setAttribute('aria-label','Rename '+category.name);
+      rename.onclick = ()=>openCategoryNameModal(category);
+      const remove = document.createElement('button');
+      remove.className = 'link-btn';
+      remove.style.color = 'var(--margin-red)';
+      remove.textContent = 'Delete';
+      remove.setAttribute('aria-label','Delete '+category.name);
+      remove.onclick = ()=>openDeleteCategoryModal(category);
+      actions.append(rename, remove);
+      row.append(label, actions);
+      list.appendChild(row);
+    });
+  };
+  categoriesModalRefresh = refresh;
+  refresh();
+  const close = ()=>{ categoriesModalRefresh = null; m.remove(); };
+  m.querySelector('#categoriesClose').onclick = close;
+  m.querySelector('#categoriesCreate').onclick = ()=>openCategoryNameModal(null);
+}
+function openDeleteCategoryModal(category){
+  const destinations = state.categories.filter(item=>item.id!==category.id);
+  if(!destinations.length){
+    showToast('Keep at least one category');
+    return;
+  }
+  const destinationOptions = destinations.map(item=>
+    `<option value="${esc(item.id)}">${esc(item.name)}</option>`).join('');
+  const m = makeModal(`
+    <h3>Delete “${esc(category.name)}”?</h3>
+    <div class="entry-meta">Choose where its khatabooks go. Books moved to History can be restored later.</div>
+    <label class="field-label" for="categoryDeleteDestination">Destination category</label>
+    <select id="categoryDeleteDestination">${destinationOptions}</select>
+    <div style="margin-top:12px;">
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:8px 0;">
+        <input type="radio" name="categoryBookAction" value="move" checked>
+        <span>Move books to this category and keep them active</span>
+      </label>
+      <label style="display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:8px 0;">
+        <input type="radio" name="categoryBookAction" value="archive">
+        <span>Move active books to History, then assign them to this category</span>
+      </label>
+    </div>
+    <div class="auth-error" id="categoryDeleteError" role="alert"></div>
+    <div class="modal-buttons">
+      <button class="btn-cancel" id="categoryDeleteCancel">Cancel</button>
+      <button class="btn-danger" id="categoryDeleteConfirm">Delete category</button>
+    </div>`);
+  m.querySelector('#categoryDeleteCancel').onclick = ()=>m.remove();
+  m.querySelector('#categoryDeleteConfirm').onclick = async ()=>{
+    const button = m.querySelector('#categoryDeleteConfirm');
+    const error = m.querySelector('#categoryDeleteError');
+    const destinationId = m.querySelector('#categoryDeleteDestination').value;
+    const archiveBooks = m.querySelector('input[name="categoryBookAction"]:checked').value==='archive';
+    const wasActiveCategory = state.activeCategoryId===category.id;
+    button.disabled = true;
+    error.textContent = '';
+    try{
+      await DB.deleteCategory(category.id, destinationId, archiveBooks);
+      state.categories = state.categories.filter(item=>item.id!==category.id);
+      state.books = state.books.map(book=>{
+        if((book.categoryId || 'cat_default')!==category.id) return book;
+        return {...book, categoryId:destinationId, ...(archiveBooks && !book.deletedAt ? {deletedAt:Date.now()} : {})};
+      });
+      if(wasActiveCategory){
+        state.activeCategoryId = destinationId;
+        rememberCategory(destinationId);
+      }
+      renderCategoryDropdown();
+      reconcileBookSelection();
+      if(categoriesModalRefresh) categoriesModalRefresh();
+      if(booksModalRefresh) booksModalRefresh();
+      m.remove();
+      showToast(archiveBooks ? 'Category deleted; books moved to History' : 'Category deleted; books moved');
+    }catch(err){
+      console.error('delete category', err);
+      error.textContent = 'Could not delete category — ' + (err && (err.code || err.message) || 'check connection');
+      button.disabled = false;
+    }
+  };
+}
+function openMoveBookModal(){
+  const book = state.books.find(item=>item.id===state.activeBookId && !item.deletedAt);
+  const destinations = state.categories.filter(item=>item.id!==state.activeCategoryId);
+  if(!book || !destinations.length){
+    showToast(destinations.length ? 'Select an active khatabook first' : 'Create another category first');
+    return;
+  }
+  const m = makeModal(`
+    <h3>Move khatabook</h3>
+    <div class="entry-meta" style="margin-bottom:8px;">${esc(book.name)} and its entries will move together.</div>
+    <label class="field-label" for="moveBookCategory">Destination category</label>
+    <select id="moveBookCategory">${destinations.map(item=>`<option value="${esc(item.id)}">${esc(item.name)}</option>`).join('')}</select>
+    <div class="auth-error" id="moveBookError" role="alert"></div>
+    <div class="modal-buttons">
+      <button class="btn-cancel" id="moveBookCancel">Cancel</button>
+      <button class="btn-save" id="moveBookConfirm">Move</button>
+    </div>`);
+  m.querySelector('#moveBookCancel').onclick = ()=>m.remove();
+  m.querySelector('#moveBookConfirm').onclick = async ()=>{
+    const button = m.querySelector('#moveBookConfirm');
+    const categoryId = m.querySelector('#moveBookCategory').value;
+    button.disabled = true;
+    try{
+      await DB.moveBookToCategory(book.id, categoryId);
+      state.books = state.books.map(item=>item.id===book.id ? {...item, categoryId} : item);
+      m.remove();
+      reconcileBookSelection();
+      const categoryName = state.categories.find(item=>item.id===categoryId)?.name || 'category';
+      showToast('Khatabook moved to '+categoryName);
+    }catch(err){
+      console.error('move khatabook to category', err);
+      m.querySelector('#moveBookError').textContent = 'Could not move khatabook — ' + (err && (err.code || err.message) || 'check connection');
+      button.disabled = false;
+    }
+  };
 }
 function deleteActiveBook(){
   const book = state.books.find(item=>item.id===state.activeBookId && !item.deletedAt);
@@ -794,6 +1153,7 @@ function openBookHistoryModal(){
         try{
           await DB.restoreBook(book.id);
           state.books = state.books.map(item=>item.id===book.id ? {...item, deletedAt: undefined} : item);
+          switchCategory(book.categoryId || 'cat_default');
           switchBook(book.id);
           refresh();
           showToast('Khatabook restored');
@@ -963,29 +1323,30 @@ function updateButtons(){
 function computeBalanceMap(){
   const sorted = [...state.entries].sort((a,b)=>
     (displayToIso(a.date)+'_'+String(a.createdAt)).localeCompare(displayToIso(b.date)+'_'+String(b.createdAt)));
-  let bal = 0, totalGave = 0, totalGot = 0;
+  let bal = 0;
   const map = {};
   sorted.forEach(e=>{
-    if(e.type==='gave'){ bal += e.amount; totalGave += e.amount; } else { bal -= e.amount; totalGot += e.amount; }
+    if(e.type==='gave') bal += e.amount; else bal -= e.amount;
     map[e.id] = bal;
   });
-  return {map, finalBalance: bal, totalGave, totalGot};
+  return {map, finalBalance: bal};
 }
 
 /* ---------------- Rendering ---------------- */
 function render(){
   if(!state.ready) return;
+  const hasBook = !!state.activeBookId;
+  $('ledgerArea').style.display = hasBook ? '' : 'none';
+  $('categoryEmptyState').style.display = !hasBook && state.activeCategoryId && state.categories.length ? '' : 'none';
   renderBalance();
   renderList();
   updateButtons();
 }
 function renderBalance(){
-  const {finalBalance, totalGave, totalGot} = computeBalanceMap();
+  const {finalBalance} = computeBalanceMap();
   const el = $('balanceAmount');
   el.textContent = (finalBalance < -0.001 ? '−' : '') + fmtMoney(finalBalance);
   el.className = 'balance-amount ' + (finalBalance > 0.001 ? 'positive' : finalBalance < -0.001 ? 'negative' : 'zero');
-  $('totalGave').textContent = fmtMoney(totalGave);
-  $('totalGot').textContent = fmtMoney(totalGot);
 }
 function closeAllEntryMenus(){ document.querySelectorAll('.entry-menu-dropdown').forEach(d=> d.style.display = 'none'); }
 function renderList(){
@@ -1145,6 +1506,8 @@ function openDeleteAccountModal(){
 /* ---------------- Event wiring ---------------- */
 $('dateInput').value = todayStr();
 $('amountInput').addEventListener('input', updateButtons);
+$('scanReceiptBtn').addEventListener('click', ()=> $('receiptInput').click());
+$('receiptInput').addEventListener('change', scanReceipt);
 $('paymentModeSelect').addEventListener('change', ()=>{
   const sel = $('paymentModeSelect');
   if(sel.value === '__add__'){
@@ -1157,6 +1520,42 @@ $('paymentModeSelect').addEventListener('change', ()=>{
 $('btnGave').addEventListener('click', ()=>addEntry('gave'));
 $('btnGot').addEventListener('click', ()=>addEntry('got'));
 $('bookSelect').addEventListener('change', ()=>switchBook($('bookSelect').value));
+$('emptyCategoryCreate').addEventListener('click', ()=>openBookNameModal(null));
+$('categorySwitch').addEventListener('click', event=>{
+  event.stopPropagation();
+  const dropdown = $('categoryDropdown');
+  if(!dropdown.hidden){
+    closeCategoryDropdown();
+    return;
+  }
+  clearTimeout(categoryCloseTimer);
+  dropdown.hidden = false;
+  $('categorySwitch').setAttribute('aria-expanded','true');
+  requestAnimationFrame(()=>dropdown.classList.add('open'));
+});
+$('categorySwitch').addEventListener('keydown', event=>{
+  if(event.key==='ArrowDown'){
+    event.preventDefault();
+    $('categorySwitch').click();
+    requestAnimationFrame(()=> $('categoryDropdown').querySelector('button')?.focus());
+  }
+});
+$('categoryDropdown').addEventListener('keydown', event=>{
+  const options = [...$('categoryDropdown').querySelectorAll('button')];
+  const index = options.indexOf(document.activeElement);
+  if(event.key==='Escape'){
+    event.preventDefault();
+    closeCategoryDropdown();
+    $('categorySwitch').focus();
+  }else if(event.key==='ArrowDown' || event.key==='ArrowUp'){
+    event.preventDefault();
+    const direction = event.key==='ArrowDown' ? 1 : -1;
+    options[(index + direction + options.length) % options.length].focus();
+  }else if(event.key==='Home' || event.key==='End'){
+    event.preventDefault();
+    options[event.key==='Home' ? 0 : options.length-1].focus();
+  }
+});
 $('exportBtn').addEventListener('click', exportCSV);
 $('newBookBtn').addEventListener('click', ()=>openBookNameModal(null));
 $('renameBookBtn').addEventListener('click', ()=>{
@@ -1164,10 +1563,109 @@ $('renameBookBtn').addEventListener('click', ()=>{
   if(book) openBookNameModal(book);
 });
 $('deleteBookBtn').addEventListener('click', deleteActiveBook);
+$('moveBookBtn').addEventListener('click', openMoveBookModal);
+$('manageCategoriesBtn').addEventListener('click', openCategoriesModal);
 $('bookHistoryBtn').addEventListener('click', openBookHistoryModal);
 $('modesBtn').addEventListener('click', openModesModal);
 $('signOutBtn').addEventListener('click', ()=>{ if(confirm('Sign out of KhataBase?')) doSignOut(); });
 $('deleteAccountBtn').addEventListener('click', openDeleteAccountModal);
+
+async function prepareReceiptImage(file){
+  if(!file.type.startsWith('image/')) throw new Error('Choose an image file.');
+  if(file.size > 12 * 1024 * 1024) throw new Error('Choose an image smaller than 12 MB.');
+  if(typeof createImageBitmap !== 'function') throw new Error('This browser cannot read the selected image.');
+  const bitmap = await createImageBitmap(file);
+  try{
+    let scale = Math.min(1, 1440 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d', {alpha:false});
+    if(!context) throw new Error('Could not prepare the image. Try another photo.');
+    let blob = null;
+    for(let attempt=0; attempt<4; attempt++){
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      blob = await new Promise(resolve=>canvas.toBlob(resolve, 'image/jpeg', 0.78));
+      if(!blob) throw new Error('Could not prepare the image. Try another photo.');
+      if(blob.size <= 1900000) break;
+      scale *= 0.8;
+    }
+    if(blob.size > 1900000) throw new Error('This image is too detailed to scan. Try a smaller photo.');
+    return blob;
+  }finally{
+    bitmap.close();
+  }
+}
+let receiptOcrWorkerPromise = null;
+function receiptOcrProgress(message){
+  if(!$('scanReceiptBtn').disabled) return;
+  const status = message.status || '';
+  if(status === 'loading tesseract core') $('scanReceiptBtn').title = 'Loading OCR engine…';
+  else if(status === 'loading language traineddata') $('scanReceiptBtn').title = 'Loading language data…';
+  else if(status === 'recognizing text'){
+    $('scanReceiptBtn').title = 'Reading bill… ' + Math.round((message.progress || 0) * 100) + '%';
+  }
+}
+function getReceiptOcrWorker(){
+  if(!receiptOcrWorkerPromise){
+    const asset = path=>new URL(path, document.baseURI).href;
+    receiptOcrWorkerPromise = Tesseract.createWorker(['eng','hin'], 1, {
+      workerPath: asset('vendor/tesseract/worker.min.js'),
+      corePath: asset('vendor/tesseract/core/tesseract-core-lstm.wasm.js'),
+      langPath: asset('vendor/tesseract/lang'),
+      gzip: true,
+      cacheMethod: 'write',
+      logger: receiptOcrProgress
+    }).catch(error=>{
+      receiptOcrWorkerPromise = null;
+      throw error;
+    });
+  }
+  return receiptOcrWorkerPromise;
+}
+async function scanReceipt(){
+  const file = $('receiptInput').files[0];
+  if(!file) return;
+  const hasFormValues = $('amountInput').value || $('noteInput').value
+    || $('paymentModeSelect').value || $('dateInput').value !== todayStr();
+  if(hasFormValues && !confirm('Scanning this bill will replace the current entry details. Continue?')){
+    $('receiptInput').value = '';
+    return;
+  }
+  const button = $('scanReceiptBtn');
+  const formControls = ['amountInput','dateInput','paymentModeSelect','noteInput','btnGave','btnGot'].map(id=>$(id));
+  formControls.forEach(control=>{ control.disabled = true; });
+  button.disabled = true;
+  button.setAttribute('aria-busy','true');
+  button.title = 'Starting on-device OCR…';
+  try{
+    const image = await prepareReceiptImage(file);
+    const worker = await getReceiptOcrWorker();
+    const {data} = await worker.recognize(image);
+    const result = parseReceiptText(data.text, state.modes.map(mode=>mode.name));
+    const hasSuggestions = result.amount !== null || result.date || result.description || result.paymentMode;
+    if(!hasSuggestions){
+      showToast('No clear details found. Please enter them manually.');
+      return;
+    }
+    $('amountInput').value = result.amount === null ? '' : String(result.amount);
+    $('dateInput').value = result.date || todayStr();
+    $('noteInput').value = result.description || '';
+    $('paymentModeSelect').value = result.paymentMode || '';
+    updateButtons();
+    showToast('Bill read on this device. Check the details before saving.');
+  }catch(error){
+    console.error('receipt scan', error);
+    showToast(error.message || 'Could not read this bill. Try another photo.');
+  }finally{
+    formControls.forEach(control=>{ control.disabled = false; });
+    button.disabled = false;
+    button.removeAttribute('aria-busy');
+    button.title = 'Scan bill on this device';
+    $('receiptInput').value = '';
+    updateButtons();
+  }
+}
 
 $('authSubmit').addEventListener('click', submitAuth);
 $('authToggle').addEventListener('click', ()=> setAuthMode(authMode==='signin' ? 'signup' : 'signin'));
@@ -1183,14 +1681,19 @@ $('menuBtn').addEventListener('click', e=>{
   const dd = $('menuDropdown'); const open = dd.style.display !== 'none';
   closeAllEntryMenus();
   dd.style.display = open ? 'none' : 'block';
+  $('menuBtn').setAttribute('aria-expanded',String(!open));
 });
 document.addEventListener('click', e=>{
   const dd = $('menuDropdown');
-  if(dd.style.display !== 'none' && !$('menuBtn').closest('.menu-wrap').contains(e.target)) dd.style.display = 'none';
+  if(dd.style.display !== 'none' && !$('menuBtn').closest('.menu-wrap').contains(e.target)){
+    dd.style.display = 'none';
+    $('menuBtn').setAttribute('aria-expanded','false');
+  }
+  if(!$('categorySwitch').closest('.category-switch-wrap').contains(e.target)) closeCategoryDropdown();
   if(!e.target.closest('.entry-menu-wrap')) closeAllEntryMenus();
 });
 document.querySelectorAll('#menuDropdown .menu-item').forEach(item=>{
-  item.addEventListener('click', ()=>{ $('menuDropdown').style.display = 'none'; });
+  item.addEventListener('click', ()=>{ $('menuDropdown').style.display = 'none'; $('menuBtn').setAttribute('aria-expanded','false'); });
 });
 
 /* ---------------- Start ---------------- */

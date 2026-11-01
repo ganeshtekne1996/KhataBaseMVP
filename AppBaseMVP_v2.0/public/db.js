@@ -102,6 +102,8 @@ export async function eraseEverything() {
   await wipeCollection("entries", uid);
   await wipeCollection("paymentModes", uid);
   await wipeCollection("bookNames", uid);
+  await wipeCollection("categoryNames", uid);
+  await wipeCollection("categories", uid);
   const books = await getDocsFromServer(collection(db, "users", uid, "books"));
   for (const book of books.docs) await wipeEntries(book.id, uid);
   for (let i = 0; i < books.docs.length; i += 400) {
@@ -119,6 +121,163 @@ const bookDoc = (id, uid = auth.currentUser.uid) => doc(db, "users", uid, "books
 const bookNameDoc = (name, uid = auth.currentUser.uid) => doc(db, "users", uid, "bookNames",
   encodeURIComponent(name.trim().toLowerCase()));
 const newBookId = () => "b_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+const categoriesCol = (uid = auth.currentUser.uid) => collection(db, "users", uid, "categories");
+const categoryDoc = (id, uid = auth.currentUser.uid) => doc(db, "users", uid, "categories", id);
+const categoryNameDoc = (name, uid = auth.currentUser.uid) => doc(db, "users", uid, "categoryNames",
+  encodeURIComponent(name.trim().toLowerCase()));
+const DEFAULT_CATEGORY_ID = "cat_default";
+const DEFAULT_CATEGORY_NAME = "General";
+const LEGACY_DEFAULT_CATEGORY_NAME = "Uncategorized";
+const newCategoryId = () => "c_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+
+export async function ensureDefaultCategory() {
+  const uid = auth.currentUser.uid;
+  const defaultRef = categoryDoc(DEFAULT_CATEGORY_ID, uid);
+  const defaultNameRef = categoryNameDoc(DEFAULT_CATEGORY_NAME, uid);
+  const createLocally = async () => {
+    await setDoc(defaultRef, { name: DEFAULT_CATEGORY_NAME, createdAt: Date.now() }, { merge: true });
+    await setDoc(defaultNameRef, { categoryId: DEFAULT_CATEGORY_ID });
+  };
+  let categories;
+  let categoriesFromServer = false;
+  if (navigator.onLine) {
+    try {
+      categories = await getDocsFromServer(categoriesCol(uid));
+      categoriesFromServer = true;
+    } catch (error) {
+      if (!["unavailable", "deadline-exceeded"].includes(error.code)) throw error;
+      categories = await getDocs(categoriesCol(uid));
+    }
+  } else {
+    categories = await getDocs(categoriesCol(uid));
+  }
+  if (categories.empty) {
+    if (!navigator.onLine || !categoriesFromServer) {
+      await createLocally();
+    } else {
+      try {
+        await runTransaction(db, async (transaction) => {
+          const [existingCategory, existingName] = await Promise.all([
+            transaction.get(defaultRef), transaction.get(defaultNameRef)
+          ]);
+          if (existingCategory.exists()) return;
+          if (existingName.exists() && existingName.data().categoryId !== DEFAULT_CATEGORY_ID) {
+            throw new Error("The default category name is already in use.");
+          }
+          transaction.set(defaultRef, { name: DEFAULT_CATEGORY_NAME, createdAt: Date.now() });
+          transaction.set(defaultNameRef, { categoryId: DEFAULT_CATEGORY_ID });
+        });
+      } catch (error) {
+        if (!["unavailable", "deadline-exceeded"].includes(error.code)) throw error;
+        await createLocally();
+      }
+    }
+  }
+
+  if (categoriesFromServer) {
+    const legacyNameRef = categoryNameDoc(LEGACY_DEFAULT_CATEGORY_NAME, uid);
+    await runTransaction(db, async (transaction) => {
+      const currentCategory = await transaction.get(defaultRef);
+      if (!currentCategory.exists() || currentCategory.data().name !== LEGACY_DEFAULT_CATEGORY_NAME) return;
+      const [legacyName, defaultName] = await Promise.all([
+        transaction.get(legacyNameRef), transaction.get(defaultNameRef)
+      ]);
+      if (defaultName.exists() && defaultName.data().categoryId !== DEFAULT_CATEGORY_ID) return;
+      if (legacyName.exists() && legacyName.data().categoryId === DEFAULT_CATEGORY_ID) {
+        transaction.delete(legacyNameRef);
+      }
+      transaction.set(defaultNameRef, { categoryId: DEFAULT_CATEGORY_ID });
+      transaction.update(defaultRef, { name: DEFAULT_CATEGORY_NAME });
+    });
+  }
+
+  const categoryIds = categories.empty
+    ? [DEFAULT_CATEGORY_ID]
+    : categories.docs.map((category) => category.id);
+  const migrationCategoryId = categoryIds.includes(DEFAULT_CATEGORY_ID) ? DEFAULT_CATEGORY_ID : categoryIds[0];
+  const books = await getDocs(booksCol(uid));
+  const legacyBooks = books.docs.filter((book) => !book.data().categoryId);
+  for (let i = 0; i < legacyBooks.length; i += 400) {
+    const batch = writeBatch(db);
+    legacyBooks.slice(i, i + 400).forEach((book) => batch.update(book.ref, { categoryId: migrationCategoryId }));
+    await batch.commit();
+  }
+}
+
+export function watchCategories(cb, onError) {
+  return onSnapshot(query(categoriesCol(), orderBy("createdAt", "asc")),
+    (s) => cb(s.docs.map((d) => ({ id: d.id, ...d.data() }))), onError);
+}
+
+export async function createCategory(name) {
+  const uid = auth.currentUser.uid;
+  const id = newCategoryId();
+  const createdAt = Date.now();
+  const nameRef = categoryNameDoc(name, uid);
+  await runTransaction(db, async (transaction) => {
+    const existing = await transaction.get(nameRef);
+    if (existing.exists()) {
+      const error = new Error("A category with that name already exists.");
+      error.code = "category-name-taken";
+      throw error;
+    }
+    transaction.set(categoryDoc(id, uid), { name: name.trim(), createdAt });
+    transaction.set(nameRef, { categoryId: id });
+  });
+  return { id, name: name.trim(), createdAt };
+}
+
+export async function renameCategory(id, name) {
+  const uid = auth.currentUser.uid;
+  const ref = categoryDoc(id, uid);
+  const newNameRef = categoryNameDoc(name, uid);
+  await runTransaction(db, async (transaction) => {
+    const category = await transaction.get(ref);
+    if (!category.exists()) throw new Error("This category no longer exists.");
+    const oldNameRef = categoryNameDoc(category.data().name, uid);
+    const newName = await transaction.get(newNameRef);
+    if (newName.exists() && newName.data().categoryId !== id) {
+      const error = new Error("A category with that name already exists.");
+      error.code = "category-name-taken";
+      throw error;
+    }
+    if (oldNameRef.path !== newNameRef.path) transaction.delete(oldNameRef);
+    transaction.set(newNameRef, { categoryId: id });
+    transaction.update(ref, { name: name.trim() });
+  });
+}
+
+export async function moveBookToCategory(bookId, categoryId) {
+  await updateDoc(bookDoc(bookId), { categoryId });
+}
+
+export async function deleteCategory(id, destinationId, archiveBooks) {
+  if (!navigator.onLine) throw new Error("You must be online to delete a category.");
+  if (id === destinationId) throw new Error("Choose a different destination category.");
+  const uid = auth.currentUser.uid;
+  const categoryRef = categoryDoc(id, uid);
+  const [category, destination, books] = await Promise.all([
+    getDocFromServer(categoryRef),
+    getDocFromServer(categoryDoc(destinationId, uid)),
+    getDocsFromServer(booksCol(uid))
+  ]);
+  if (!category.exists()) throw new Error("This category no longer exists.");
+  if (!destination.exists()) throw new Error("The destination category no longer exists.");
+  const affected = books.docs.filter((book) => (book.data().categoryId || DEFAULT_CATEGORY_ID) === id);
+  for (let i = 0; i < affected.length; i += 400) {
+    const batch = writeBatch(db);
+    affected.slice(i, i + 400).forEach((book) => {
+      const changes = { categoryId: destinationId };
+      if (archiveBooks && !book.data().deletedAt) changes.deletedAt = Date.now();
+      batch.update(book.ref, changes);
+    });
+    await batch.commit();
+  }
+  const batch = writeBatch(db);
+  batch.delete(categoryNameDoc(category.data().name, uid));
+  batch.delete(categoryRef);
+  await batch.commit();
+}
 
 export async function ensureDefaultBook() {
   const uid = auth.currentUser.uid;
@@ -155,7 +314,7 @@ export function watchBooks(cb, onError) {
     (s) => cb(s.docs.map((d) => ({ id: d.id, ...d.data() }))), onError);
 }
 
-export async function createBook(name) {
+export async function createBook(name, categoryId = DEFAULT_CATEGORY_ID) {
   const uid = auth.currentUser.uid;
   const id = newBookId();
   const createdAt = Date.now();
@@ -167,10 +326,10 @@ export async function createBook(name) {
       error.code = "book-name-taken";
       throw error;
     }
-    transaction.set(bookDoc(id, uid), { name: name.trim(), createdAt });
+    transaction.set(bookDoc(id, uid), { name: name.trim(), createdAt, categoryId });
     transaction.set(nameRef, { bookId: id });
   });
-  return { id, name: name.trim(), createdAt };
+  return { id, name: name.trim(), createdAt, categoryId };
 }
 
 export async function renameBook(id, name) {

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mykhata-cache-v3';   // bump on every release
+const CACHE_NAME = 'mykhata-cache-v6';   // bump on every release
 const APP_SHELL = ['index.html', 'db.js', 'firebase-config.js', 'manifest.json',
                    'privacy.html', 'terms.html', 'icon-192.png', 'icon-512.png'];
 

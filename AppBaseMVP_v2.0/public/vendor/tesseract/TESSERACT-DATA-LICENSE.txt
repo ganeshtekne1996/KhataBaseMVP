@@ -1,0 +1,6 @@
+The English and Hindi traineddata files are distributed by the
+@tesseract.js-data/eng and @tesseract.js-data/hin packages (MIT licensed),
+from the naptha/tessdata project.
+
+The Tesseract.js and Tesseract.js-core license notices are included alongside
+these files.

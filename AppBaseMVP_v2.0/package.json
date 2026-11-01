@@ -1,5 +1,11 @@
 {
+  "scripts": {
+    "test": "node --test public/receipt-parser.test.mjs"
+  },
   "dependencies": {
-    "firebase": "^13.1.0"
+    "@tesseract.js-data/eng": "^1.0.0",
+    "@tesseract.js-data/hin": "^1.0.0",
+    "firebase": "^13.1.0",
+    "tesseract.js": "^7.0.0"
   }
 }
